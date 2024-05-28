@@ -94,6 +94,7 @@ circleweak= 0.5; % how weak is the circle compared to mask (lower means less con
 %% Text Parameters
 text.keyleft="l";
 text.keyright="r";
+
 %% Create Stimuli
 
 maxframesnoise=time.ISI+time.ITI+time.preq; % How many frames are needed per trial
@@ -410,7 +411,7 @@ function [thresholdres,newgaborpercent]=staircasefun(reversals,scr,time,text,sti
         trialcount=0; % initiate trial counter
         reverscount=0; % initiate reversal counter
         firstrev=0; % initialize first reversal
-        lastchange=0; % initialize last change direction var
+        lastchange='undef' ; % initialize last change direction var
         while ~thresholdfound
             [~, respeval, ~, ~]=trialfunction(scr,time,text,stim,currentgabor);
             trialcount=trialcount+1;
@@ -474,6 +475,80 @@ function [thresholdres,newgaborpercent]=staircasefun(reversals,scr,time,text,sti
     end
 end
 
+%% Just-noticable-difference Function
+% One up, one down for now. Change if needed
+
+function [JND]=JNDfunction(scr,time,text,stim)
+
+% Parameters
+comparison_length=2; % start value for comparison interval length in s
+standard_length=0.8; % length of standrad interval (ideally the same as the interval shown in the main task)
+adjustment_steps=0.05; % size of adjustment each step in seconds
+maxreversals=20;
+
+% Initialize
+jndfound=0;
+currstep='none'; % preallocate previous response for reversal counter
+revers_count=0; %preallocate reversal counter
+
+while ~jndfound
+
+    % Shuffle which interval gets presented first
+    interval_lengths=[standard_length, comparison_length];
+    interval_lengths=interval_lengths(randperm(length(interval_lengths)));
+
+    % Show First Interval
+
+    % Show Second Interval
+
+    % Query Response
+
+    % Evaluate Response
+    if  interval_lengths(1)==comparison_length && comparison_length>standard_length  && response==1 % comparison is longer and was presented first and the answer was 1 --> correct
+        resp_eval=1;
+    elseif interval_lengths(2)==comparison_length && comparison_length>standard_length && response==2 % comparison is longer and was presented second and the answer was 2 --> correct
+        resp_eval=1;
+    elseif interval_lengths(2)==comparison_length && comparison_length==standard_length
+        resp_eval=0; % always incorrect when comparison and standard are equal
+    else
+        resp_eval=0; % incorrect if none of the above hold
+    end
+
+    % Register data
+    
+
+    % Adjust Interval Length
+    if  resp_eval==1 % response is correct
+        % Lower comparison
+        comparison_length_new=comparison_length-adjustment_steps; % lower comparison toward standard
+        currstep='down'; % register which direction the current step was taken
+        if comparison_length_new<standard_length % if the new comparison would be smaller than the standard (can happen depending on which step size is chosen, so that it 'jumps over' the equal stage), make equal to standard
+            comparison_length_new=standard_length;
+        end
+    else % if response is incorrect, make comparison longer
+        comparison_length_new=comparison_length+adjustment_steps;
+        currstep='up'; % register which direction the current step was taken
+    end
+
+    % Reversal?
+    if currstep~=prevstep % if current direction is not equal to previous direction
+        revers_count=revers_count+1; % count as reversal
+    end
+    prevstep=currstep; % update step direction for next iteration
+
+    % Update Comparison or JND Found? 
+    if revers_count==maxreversals % if max reversals has been reached, take the average across the last 10 reversals as the JND
+        jndfound=1;
+        JND=;
+    elseif corr_at_lowest_level==lim_lowest_level % if the answer at the lowest level was correct x times in a row, finish and register this as JND
+        jndfound=1;
+        JND=[standard_length comparison_length];
+    else % if not found yet, update comparison
+        comparison_length=comparison_length_new;
+    end
+end
+
+end
 %% Response Function
 function [response]=respfunction(questiontext,scr)
 
