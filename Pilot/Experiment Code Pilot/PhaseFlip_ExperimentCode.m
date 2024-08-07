@@ -1,4 +1,6 @@
 %% Experiment Code Project 2 - Phase Flip
+
+% Requires the custom functions  PTB_plotfig.m and navipage.m
 % Clear
 sca;
 close all;
@@ -13,10 +15,12 @@ time=[]; % Timing Information
 floatwin=1; % Take over whole screen (0) or just part of it (1)
 scr.scope=0; % Oscilloscope Test?
 SkipSync=1; % Skip Synch (1 when testing on laptop)
+
+% Experiment Sections
 staircase=0; % Staircase?
 JND_task=1; % JND Task?
 
-% Blocks Trials etc.
+% Blocks, Trials etc.
 cond=[1 2 1 2]; % conditions (1=800ms, 2=850ms)
 nblocks=length(cond); % total blocks
 ntrials=3; % trials per block
@@ -44,6 +48,7 @@ else
     [100 100 1600 1600], [], [], [], [], [], kPsychGUIWindow);
 end
 scr.ifi = Screen('GetFlipInterval', scr.win);
+
 % Define Screen Dimensions
 [scr.xCenter, scr.yCenter] = RectCenter(scr.windowRect);
 [scr.axisx]=scr.windowRect([1,3]);
@@ -95,6 +100,8 @@ circleweak= 0.5; % how weak is the circle compared to mask (lower means less con
 %% Text Parameters
 text.keyleft="l";
 text.keyright="r";
+
+text.JND_instructions={'JND_Task. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
 
 %% Create Stimuli
 
@@ -154,9 +161,6 @@ gaussEnvt(gaussEnvt<0.01)=0; % change close-to-zero peripheral elements to zero
 stim.gaborRight=imRright.*gaussEnvt;
 stim.gaborLeft=imRleft.*gaussEnvt;
  % Embedding it in mask happens lower after the intensity has been chosen
-
-%% Instructions
-JND_instructions={'JND_Task. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
  
  %% Run Experiment
 try
@@ -172,13 +176,44 @@ try
     DrawFormattedText(scr.win,'JND Task Instructions. \n\n Press any button to start.', 'center', 'center', scr.fontcolour);
     Screen('Flip', scr.win);
     KbStrokeWait;
-    if JND_task
-    [JND]=JNDfunction(scr,time,JND_instructions,stim);
+
+    while JND_task
+        [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
+        % Plot results and flip to screen
+        JND_fig = figure('Visible', 'off'); % make invisible figure
+        plot(1:length(JND_results.Var1), JND_results.Var1, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Var1)]); ylim([min(JND_results.Var1)-1 max(JND_results.Var1)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
+        
+        PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
+        Screen('Flip', scr.win);
+        KbStrokeWait;
+
+        % Confirm or repeat
+        adjusttext=sprintf('Comparison Value: %f \n\n Confirm (2) or Repeat (3)?',JND);
+        [response]=respfunction(adjusttext,scr);
+        if response==0 % if adjustment requested, ask for confirmation
+            confirmationtext='Are you sure? \n\n Do not repeat unless you are sure something went wrong the first time. \n\n\n\n Accept staircase value (2) or Adjust anyway (3)?';
+            [response]=respfunction(confirmationtext,scr);
+            if response==0
+                % Enter here what happens when the JND gets repeated. what gets saved etc.
+            else
+                %Save results
+                subresults.JND_results=JND_results;
+                subresults.JND=JND;
+                save(['test.mat'], 'subresults')
+                JND_task=0; % Exit JND Task
+            end
+        else
+            %Save results
+            subresults.JND_results=JND_results;
+            subresults.JND=JND;
+            save(['test.mat'], 'subresults')
+            JND_task=0; % Exit JND Task
+        end
     end
 
     % Staircase
     if staircase
-   [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent);
+        [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent);
     end
 
     % Accept Staircase Output or Adjust Gabor Difficulty
@@ -494,9 +529,7 @@ end
 %% Just-noticable-difference Function
 % One up, one down for now. Change if needed
 % Make sure to jitter the background noise so that the longer interval is not obvious by noise alone.
-% Make initial adjustment faster so that the whole thing doesn't take too much time.
 % Maybe remove backfground noise?
-% Add interval numbers to screen while trial is running
 
 function [JND,JND_results]=JNDfunction(scr,time,instr,stim)
 
@@ -505,9 +538,10 @@ navipage(scr.win,instr)
 % Parameters
 comparison_length=2; % start value for comparison interval length in s
 standard_length=0.7; % length of standrad interval (ideally the same as the interval shown in the main task)
+init_adjustment_steps=0.25; % bigger steps in the beginning (first descent) 
 adjustment_steps=0.05; % size of adjustment each step in seconds
 maxreversals=5;
-avg_reversals=5; % average across how many of the last reversals to calculate JND?
+avg_trials=5; % average across how many of the last trials to calculate JND?
 
 % Initialize
 jndfound=0;
@@ -516,9 +550,9 @@ revers_count=0; %preallocate reversal counter
 JND_results=table(); %preallocate results 
 currtrial=0;
 
- % Shuffle textures
- cuetex=stim.cuetex(randperm(length(stim.cuetex)));
- noisetex=stim.noisetex(randperm(length(stim.noisetex)));
+% Shuffle textures
+cuetex=stim.cuetex(randperm(length(stim.cuetex)));
+noisetex=stim.noisetex(randperm(length(stim.noisetex)));
 
 while ~jndfound
 
@@ -536,6 +570,7 @@ while ~jndfound
         % Fixation
         for fixidx=1:time.ITI
             Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
+            DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour); % Adds current interval number to screen
             Screen('Flip', scr.win);
             cnoise=cnoise+1;
         end
@@ -543,18 +578,21 @@ while ~jndfound
         % Interval
         for cueidx=1:time.cuedur 
             Screen('DrawTexture', scr.win, cuetex(ccue1), [], [], 0);
+            DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
             ccue1=ccue1+1;
         end
 
         for fixidx=1:interval_lengths(intervals)
             Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
+            DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
             cnoise=cnoise+1;
         end
 
         for cueidx=1:time.cuedur
             Screen('DrawTexture', scr.win, cuetex(ccue2), [], [], 0);
+            DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
             ccue2=ccue2+1;
         end
@@ -562,6 +600,7 @@ while ~jndfound
         % Fixation
         for fixidx=1:time.ITI
             Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
+            DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
             cnoise=cnoise+1;
         end
@@ -609,15 +648,21 @@ while ~jndfound
     end
 
     % Adjust Interval Length
+    if revers_count==0 % until first reversal, go in bigger steps
+        adj_step=init_adjustment_steps;
+    else
+        adj_step=adjustment_steps;
+    end
+
     if  resp_eval==1 % response is correct
         % Lower comparison
-        comparison_length_new=comparison_length-adjustment_steps; % lower comparison toward standard
+        comparison_length_new=comparison_length-adj_step; % lower comparison toward standard
         currstep='down'; % register which direction the current step was taken
         if comparison_length_new<standard_length % if the new comparison would be smaller than the standard (can happen depending on which step size is chosen, so that it 'jumps over' the equal stage), make equal to standard
             comparison_length_new=standard_length;
         end
     else % if response is incorrect, make comparison longer
-        comparison_length_new=comparison_length+adjustment_steps;
+        comparison_length_new=comparison_length+adj_step;
         currstep='up'; % register which direction the current step was taken
     end
 
@@ -632,13 +677,12 @@ while ~jndfound
     % Update Comparison or JND Found? 
     if revers_count==maxreversals % if max reversals has been reached, take the average across the last 10 reversals as the JND
         jndfound=1;
-        %JND=mean(JND_results(end-avg_reversals:end,2)); % average across last trials to establish JND
-        JND=comparison_length;
+        JND=mean(JND_results{end-avg_trials:end,2}); % average across last trials to establish JND
     else % if not found yet, update comparison
         comparison_length=comparison_length_new;
     end
 end
-
+JND_results.Properties.VariableNames={'Standard','Comparison','Response','Correct','Adjustment'}; % add variable names to results table
 end
 %% Response Function
 function [response]=respfunction(questiontext,scr)
