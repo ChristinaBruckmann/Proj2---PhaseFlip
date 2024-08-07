@@ -155,10 +155,7 @@ stim.gaborRight=imRright.*gaussEnvt;
 stim.gaborLeft=imRleft.*gaussEnvt;
  % Embedding it in mask happens lower after the intensity has been chosen
 
-%% Instructions
-JND_instructions={'JND_Task. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
- 
- %% Run Experiment
+%% Run Experiment
 try
 
      % Introduction
@@ -173,7 +170,7 @@ try
     Screen('Flip', scr.win);
     KbStrokeWait;
     if JND_task
-    [JND]=JNDfunction(scr,time,JND_instructions,stim);
+    [JND]=JNDfunction(scr,time,text,stim);
     end
 
     % Staircase
@@ -189,7 +186,7 @@ try
         [response]=respfunction(confirmationtext,scr);
         if response==0
              gaborpercent=adjustintensity(scr, gaborpercent);
-        end  
+        end
     end
 
     % Display the setting that will be used
@@ -498,9 +495,11 @@ end
 % Maybe remove backfground noise?
 % Add interval numbers to screen while trial is running
 
-function [JND,JND_results]=JNDfunction(scr,time,instr,stim)
+function [JND,JND_results]=JNDfunction(scr,time,text,stim)
 
-navipage(scr.win,instr)
+% Show Instructions
+JND_instructions=
+navipage(scr.win,instructions)
 
 % Parameters
 comparison_length=2; % start value for comparison interval length in s
