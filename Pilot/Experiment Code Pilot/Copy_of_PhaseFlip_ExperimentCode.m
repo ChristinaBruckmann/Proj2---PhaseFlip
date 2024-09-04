@@ -1,6 +1,4 @@
 %% Experiment Code Project 2 - Phase Flip
-% TO do:
-% repeat trial if it was interrupted by graceful abort
 
 % Requires the custom functions  PTB_plotfig.m and navipage.m
 % Clear
@@ -26,9 +24,6 @@ JND_task=1; % JND Task?
 cond=[1 2 1 2]; % conditions (1=800ms, 2=850ms)
 nblocks=length(cond); % total blocks
 ntrials=3; % trials per block
-
-% Savefilename (add subj num here etc.)
-savefilename='test.mat';
 %% PTB Set-Up
 
 % Setup PTB
@@ -176,41 +171,38 @@ try
     Screen('Flip', scr.win);
     KbStrokeWait;
 
+
     % JND Task
     while JND_task
         [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
         % Plot results and flip to screen
         JND_fig = figure('Visible', 'off'); % make invisible figure
-        plot(1:length(JND_results.Comparison), JND_results.Comparison, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Comparison)]); ylim([min(JND_results.Comparison)-1 max(JND_results.Comparison)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
+        plot(1:length(JND_results.Var1), JND_results.Var1, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Var1)]); ylim([min(JND_results.Var1)-1 max(JND_results.Var1)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
+        
         PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
         Screen('Flip', scr.win);
         KbStrokeWait;
-        KbStrokeWait;
-        KbStrokeWait;
-       
+
         % Confirm or repeat
-        adjusttext=sprintf('Comparison Value: %f \n\n Confirm (1) or Repeat (0)?',JND);
-        [response]=respfunction(scr.win,adjusttext,["1","0"]);
-        if double(response)==0 % if adjustment requested, ask for confirmation
-            confirmationtext='Are you sure? \n\n Do not repeat unless you are sure something went wrong the first time. \n\n\n\n Accept staircase value (1) or Adjust anyway (0)?';
-           [response]=respfunction(scr.win,confirmationtext,["1","0"]);
-            if  double(response)==0
-                % Save previous results and repeat JND task
-                subresults.JND_res_discarded=JND_results;
-                subresults.JND_discarded=JND;
-                save(savefilename, 'subresults')
+        adjusttext=sprintf('Comparison Value: %f \n\n Confirm (2) or Repeat (3)?',JND);
+        [response]=respfunction(adjusttext,scr);
+        if response==0 % if adjustment requested, ask for confirmation
+            confirmationtext='Are you sure? \n\n Do not repeat unless you are sure something went wrong the first time. \n\n\n\n Accept staircase value (2) or Adjust anyway (3)?';
+            [response]=respfunction(confirmationtext,scr);
+            if response==0
+                % Enter here what happens when the JND gets repeated. what gets saved etc.
             else
                 %Save results
                 subresults.JND_results=JND_results;
                 subresults.JND=JND;
-                save(savefilename, 'subresults')
+                save(['test.mat'], 'subresults')
                 JND_task=0; % Exit JND Task
             end
         else
             %Save results
             subresults.JND_results=JND_results;
             subresults.JND=JND;
-            save(savefilename, 'subresults')
+            save(['test.mat'], 'subresults')
             JND_task=0; % Exit JND Task
         end
     end
@@ -542,14 +534,14 @@ navipage(scr.win,instr)
 % Parameters
 comparison_length=2; % start value for comparison interval length in s
 standard_length=0.7; % length of standrad interval (ideally the same as the interval shown in the main task)
-init_adjustment_steps=0.3; % bigger steps in the beginning (first descent) 
+init_adjustment_steps=0.25; % bigger steps in the beginning (first descent) 
 adjustment_steps=0.05; % size of adjustment each step in seconds
 maxreversals=5;
 avg_trials=5; % average across how many of the last trials to calculate JND?
 
 % Initialize
 jndfound=0;
-prevstep='down'; % preallocate previous response for reversal counter
+prevstep='none'; % preallocate previous response for reversal counter
 revers_count=0; %preallocate reversal counter
 JND_results=table(); %preallocate results 
 currtrial=0;
@@ -616,12 +608,34 @@ while ~jndfound
     end
 
     % Query Response
-     [response]=respfunction(scr.win,'Which interval was longer? \n\n 1 or 2?',["1","2"]);
+    resp=0; % responded?
+        while~resp
+            DrawFormattedText(scr.win,'Which interval was longer? \n\n 1 or 2?', 'center', 'center',scr.fontcolour);
+            Screen('Flip', scr.win);
+            [~, keyNamethr, ~]=KbStrokeWait;
+            if strcmp(KbName(keyNamethr),'9')==1 || strcmp(KbName(keyNamethr),'9(')==1
+                DrawFormattedText(scr.win,'Continue (8)? Exit (9)?', 'center', 'center', scr.fontcolour);
+                Screen('Flip', scr.win);
+                [~, keyNamethr, ~]=KbStrokeWait;
+                if strcmp(KbName(keyNamethr),'9') || strcmp(KbName(keyNamethr),'9(')==1
+                    sca
+                    return
+                elseif strcmp(KbName(keyNamethr),'8') || strcmp(KbName(keyNamethr),'8*')==1
+                    continue
+                end
+            elseif strcmp(KbName(keyNamethr),'1')==1 || strcmp(KbName(keyNamethr),'1!')==1
+                response=1;
+                resp=1; 
+            elseif strcmp(KbName(keyNamethr), '2')==1 || strcmp(KbName(keyNamethr),'2@')==1
+                response=2;
+                resp=1; 
+            end
+        end
 
     % Evaluate Response
-    if  interval_lengths(1)==round(comparison_length/scr.ifi) && comparison_length>standard_length  && double(response)==1 % if (comparison was presented first & is longer) AND (the answer was 1) --> correct
+    if  interval_lengths(1)==round(comparison_length/scr.ifi) && comparison_length>standard_length  && response==1 % if (comparison was presented first & is longer) AND (the answer was 1) --> correct
         resp_eval=1;
-    elseif interval_lengths(2)==round(comparison_length/scr.ifi) && comparison_length>standard_length && double(response)==2 % if (comparison was presented second & is longer) AND (the answer was 2) --> correct
+    elseif interval_lengths(2)==round(comparison_length/scr.ifi) && comparison_length>standard_length && response==2 % if (comparison was presented second & is longer) AND (the answer was 2) --> correct
         resp_eval=1;
     elseif interval_lengths(2)==round(comparison_length/scr.ifi) && comparison_length==standard_length % standard and comparison are equal
         resp_eval=0; % always incorrect when comparison and standard are equal
@@ -630,7 +644,7 @@ while ~jndfound
     end
 
     % Adjust Interval Length
-    if revers_count==0 && resp_eval==1% until first reversal, go in bigger steps
+    if revers_count==0 % until first reversal, go in bigger steps
         adj_step=init_adjustment_steps;
     else
         adj_step=adjustment_steps;
@@ -665,4 +679,32 @@ while ~jndfound
     end
 end
 JND_results.Properties.VariableNames={'Standard','Comparison','Response','Correct','Adjustment'}; % add variable names to results table
+end
+%% Response Function
+function [response]=respfunction(questiontext,scr)
+
+resp=0; % responded?
+        while~resp
+            DrawFormattedText(scr.win,questiontext, 'center', 'center',scr.fontcolour);
+            Screen('Flip', scr.win);
+            [~, keyNamethr, ~]=KbStrokeWait;
+            if strcmp(KbName(keyNamethr),'9')==1 || strcmp(KbName(keyNamethr),'9(')==1
+                DrawFormattedText(scr.win,'Continue (8)? Exit (9)?', 'center', 'center', scr.fontcolour);
+                Screen('Flip', scr.win);
+                [~, keyNamethr, ~]=KbStrokeWait;
+                if strcmp(KbName(keyNamethr),'9') || strcmp(KbName(keyNamethr),'9(')==1
+                    sca
+                    return
+                elseif strcmp(KbName(keyNamethr),'8') || strcmp(KbName(keyNamethr),'8*')==1
+                    continue
+                end
+            elseif strcmp(KbName(keyNamethr),'3')==1 || strcmp(KbName(keyNamethr),'3#')==1
+                response=0;
+                resp=1; 
+            elseif strcmp(KbName(keyNamethr), '2')==1 || strcmp(KbName(keyNamethr),'2@')==1
+                response=1;
+                resp=1; 
+            end
+        end
+
 end
