@@ -5,10 +5,15 @@
         % jitter duration for noise presentation before and after each trial
         % insert number code that experimenter has to enter before continuing (add to baukasten as a function?)
         % add graceful abort during block break
+        % Add file name 
+        % subresults saves timing as frames, change to seconds
+        % make shift graceful abort inserted between blocks, improve!
+        % Include nice closing slide saying the data was saved
 
     % Major Steps:
         % Add Instructions
         % Set-Up Scope Test (with menue to choose trial type)
+        % Include GUI and Option to re-start in the middle.
         % Test code functionality for the whole experiment
         % EEG Prep Code
 
@@ -50,9 +55,9 @@ JND_task=0; % JND Task?
 staircase=0; % Staircase?
 
 % Savefilename (add subj num here etc.)
-if testing
+% if testing
 savefilename='test.mat';
-end
+% end
 %% PTB Set-Up
 
 % Setup PTB
@@ -264,11 +269,11 @@ stim.gaborLeft=imRleft.*gaussEnvt;
  % Embedding it in mask happens lower after the intensity has been chosen
  
 
- %% Oscilloscope Test
- DrawFormattedText(scr.win, 'Welcome to the Oscilloscope Testing Environment \n\n Press any button to continue.', 'center', 'center', scr.fontcolour);
- Screen('Flip', scr.win);
- responsetext=sprintf("Which condition would you like to test? \n\n\n 1) %i seconds \n\n 2) %i seconds ",)
- [response,resp_eval]=respfunction(scr.win,responsetext,responsebuttons,responsemapping,graceful_abort,fontcolour)
+ % %% Oscilloscope Test
+ % DrawFormattedText(scr.win, 'Welcome to the Oscilloscope Testing Environment \n\n Press any button to continue.', 'center', 'center', scr.fontcolour);
+ % Screen('Flip', scr.win);
+ % responsetext=sprintf("Which condition would you like to test? \n\n\n 1) %i seconds \n\n 2) %i seconds ",)
+ % [response,resp_eval]=respfunction(scr.win,responsetext,responsebuttons,responsemapping,graceful_abort,fontcolour)
  %% Save all parameters and other info
  subresults.trialmatrix=trialmatrix;
  subresults.screeninfo=scr;
@@ -364,7 +369,7 @@ try
                 resulttable(tottrialcount,:)=table(currcond, b, t, trialinfo(1), trialinfo(2),RT, Resp, RespEval, warning, gaborpercent,stim.maskintensity, 'VariableNames',{'Condition','Block', ...
                     'Trial','Trial Type','Target Interval','Reaction Time', 'Orientation Reseponse', 'Correct/Incorrect', 'Late Warning', 'Gabor Strength','Mask Intensity'});
                 subresults.data=resulttable;
-                save(['test.mat'], 'subresults')
+                save('test.mat', 'subresults')
                 tottrialcount=tottrialcount+1; % update total trial counter
             else % repeat the trial and do not save output
                 DrawFormattedText(scr.win,'Press any button to continue the task.', 'center', 'center', scr.fontcolour);
@@ -379,10 +384,17 @@ try
             Screen('Flip', scr.win);
             KbStrokeWait;
         else
-            blockendmessage=sprintf('End of block %i/%i \n\nPlease take a break. \n\n \n\nPress any button to start the next block.',b,nblocks);
-            DrawFormattedText(scr.win,blockendmessage, 'center', 'center', scr.fontcolour);
-            Screen('Flip', scr.win);
-            KbStrokeWait;
+            % blockendmessage=sprintf('End of block %i/%i \n\nPlease take a break. \n\n \n\nPress any button to start the next block.',b,nblocks);
+            % DrawFormattedText(scr.win,blockendmessage, 'center', 'center', scr.fontcolour);
+            cont=0; % continue with next block?
+            while ~cont
+                [response,resp_eval]=respfunction(scr.win,"Block finished. Continue?",["1","2"]);
+                if double(response)==1 || double(response)==2
+                    cont=1;
+
+                    Screen('Flip', scr.win);
+                end
+            end
         end
     end
 
@@ -539,7 +551,7 @@ if ~speed % if not in speed run mode, ask question as normal, otherwise automati
         WaitSecs(1.5)
     end
 else % in speed run assign random RT and random response.
-    RT=0;
+    RT=rand(1);
     warning=0;
     Resp=randi([0,1]);
     if targetorient==Resp
