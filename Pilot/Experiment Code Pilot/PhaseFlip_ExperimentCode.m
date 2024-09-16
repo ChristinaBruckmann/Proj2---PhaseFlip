@@ -1,8 +1,6 @@
 %% Experiment Code Project 2 - Phase Flip
 % To do:
 
-        % BUGS
-        % unlock_continue crashes after 1 time use after opening matlab. closing and restarting makes it work again for 1 time.
         
     % Minor Fixes:
         % jitter duration for noise presentation before and after each trial
@@ -28,39 +26,170 @@
 sca;
 close all;
 clear;
-clear mex;
+%clear mex;
 
 % Initialize Structs
 scr=[]; % Everything related to PTB Screen
 stim=[]; % Stimulus Information
 time=[]; % Timing Information
 
-%% Usability Parameters
+cd 'C:\Users\cbruckmann\Documents\PhD Projects\Proj2 - PhaseFlip\Pilot\Experiment Code Pilot'
+%% Input GUI
+input_complete=0;
+while ~ input_complete
+    % Which type of settings would you like?
+    title = 'What would you like to do?';
+    options = {'Run Participant', 'Trigger Check', 'Oscilloscope Test','Debugging'};
 
-% Debugging and Testing
-floatwin=1; % Take over whole screen (0) or just part of it (1)
-SkipSync=1; % Skip Synch (1 when testing on laptop)
-testing=1; % testing the code? reduces amount of trials to a minimum
-speedrun=1; % automatically chooses a response, no need to manually click anything (used for testing the code)
-scr.unlock_code="123"; % code needed for sections where only the experimenter can proceed to the next slide (using unlock_continue.m, always press enter at the end of the code)
+    run_type = centeredMenu(title, options{:});
 
-% Oscilloscope Testing?
-scr.scope=0; % Oscilloscope Testing?
-if scr.scope % deactivate anything that interferes with it. 
-    floatwin=0;
-    SkipSync=0;
-    speedrun=0;
+    switch run_type
+        case 0
+            f=errordlg("Please select what you would like to do.");
+            uiwait(f)
+        case 1 % Running a participant
+            floatwin=0; % Take over whole screen (0) or just part of it (1)
+            SkipSync=1; % Skip Sync Tests (1 when testing on laptop)
+            testing=0; % testing the code? reduces amount of trials to a minimum
+            speedrun=0; % automatically chooses a response, no need to manually click anything (used for testing the code)
+            scr.scope=0; % run scope test?
+
+            % Experiment Sections
+            JND_task=1; % JND Task?
+            staircase=1; % Staircase?
+            practice=1; % Practice?
+
+            % Input Subject Number
+            sub_num_compl=0;
+            subresults.subj_num=[];
+            valid_subnumber=0;
+            while ~sub_num_compl
+                while ~valid_subnumber
+                    subresults.subj_num =  str2double(string(inputdlg('Subject Number:')));
+                    if ~isempty(subresults.subj_num) % If number has been entered, check if it is a valid number
+                        isWholePositiveInteger = isnumeric(subresults.subj_num) && isfinite(subresults.subj_num) && subresults.subj_num > 0 && mod(subresults.subj_num,1) == 0;
+                        if isWholePositiveInteger
+                            valid_subnumber=1;
+                        else
+                            f=errordlg("Subject number must be a whole positive integer.");
+                            uiwait(f)
+                        end
+                    end
+                end
+
+                % Check if a file for this participant already exists
+                savefilename=sprintf("Pilot_PhaseFlip_Subj%i",subresults.subj_num);
+                try
+                    load(savefilename) % Try to load a file with this name, if it exists ask if this should be used
+                    answer = questdlg('Subject already exists. Load existing file?','Existing Subject', 'Yes','Return.','Return.');
+                    switch answer
+                        case 'Yes'
+                            % Start where the participant has left off?
+                            answer = questdlg('Reloading file. Start where the participant left off?','Existing Subject', 'Yes','No - restart.');
+                            switch answer
+                                case 'Yes'
+                                     sub_num_compl=1;
+                                case 'No - restart.'
+                                    old_subresults=subresults; % save previous results in file under new name
+                                    save(savefilename,old_subresults)
+                                    subresults=[]; % restart with clean subresults
+                                    save(savefilename,subresults)
+                                    f=msgbox("New file created.");
+                                    uiwait(f)
+                                    sub_num_compl=1;
+                            end
+                        case 'Return'
+                            continue % Re-enter subject number
+                    end
+                catch ME
+                    answer = questdlg('New subject. Create a new file?','New Subject', 'Yes','Return','Return');
+                    % Handle response
+                    switch answer
+                        case 'Yes'
+                            save(savefilename,"subresults");
+                            f=msgbox("New file created.");
+                            uiwait(f)
+                            sub_num_compl=1;
+                        case 'Return'
+                            continue % Re-enter subject number
+                    end
+                end
+            end
+
+            % Input Experimenter Name
+            subresults.experimenter = {};
+            while true
+                answer = inputdlg('Experimenter Name:');
+                if isempty(answer)  % User closed the dialog without entering anything
+                    continue;       % Reopen the dialog
+                elseif ~isempty(strtrim(answer{1}))  % Check if input is non-empty and not just spaces
+                    subresults.experimenter = string(answer);  % Valid input, exit the loop
+                    break;
+                end
+            end
+
+            input_complete=1;
+        case 2 % Trigger Check
+            % Jumps directly to the real experiment to test a trial, this skips JND, Staircase and Practice
+            floatwin=0; 
+            SkipSync=0; 
+            testing=0;
+            speedrun=0;
+            scr.scope=0;
+
+            % Experiment Sections
+            JND_task=0; 
+            staircase=0; 
+            practice=0; 
+
+            savefilename=sprintf('trigger_test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
+            input_complete=1;
+        case 3 % Oscilloscope Test
+            floatwin=0; 
+            SkipSync=0; 
+            testing=0;
+            speedrun=0; 
+            scr.scope=1;
+
+            input_complete=1;
+        case 4 % Debugging
+            % Choose which debugging options you want
+            prompt = 'Select debugging options:';
+            options = {'Reduced_TrialN', 'Speedrun', 'JNDTask','Staircase','Practice','SkipSync','Floating_Window'};
+
+            % Display list dialog and get selected indices
+            [selectedIndices, ~] = listdlg('PromptString', prompt, ...
+                'ListString', options, ...
+                'SelectionMode', 'multiple', ...
+                'OKString', 'Select', ...
+                'CancelString', 'Cancel');
+
+            % Initialize struct to store variables
+            varStruct = struct();
+
+            % Assign values based on selection
+            for i = 1:length(options)
+                if ismember(i, selectedIndices)
+                    varStruct.(options{i}) = 1;
+                else
+                    varStruct.(options{i}) = 0;
+                end
+            end
+
+            % Debugging Options Chosen
+            testing = varStruct.(options{1});
+            speedrun = varStruct.(options{2});
+            JND_task = varStruct.(options{3});
+            staircase = varStruct.(options{4});
+            practice = varStruct.(options{5});
+            SkipSync=varStruct.(options{6});
+            floatwin=varStruct.(options{7});
+            
+            savefilename=sprintf('test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
+            scr.scope=0;
+            input_complete=1;
+    end
 end
-
-% Experiment Sections
-JND_task=0; % JND Task?
-staircase=0; % Staircase?
- 
-
-% Savefilename (add subj num here etc.)
-% if testing
-savefilename='test.mat';
-% end
 %% PTB Set-Up
 
 % Setup PTB

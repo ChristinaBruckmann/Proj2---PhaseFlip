@@ -1,25 +1,21 @@
 %% Experiment Code Project 2 - Phase Flip
 % To do:
-
-        % BUGS
-        % unlock_continue crashes after 1 time use after opening matlab. closing and restarting makes it work again for 1 time.
         
     % Minor Fixes:
         % jitter duration for noise presentation before and after each trial
-        % Add file name 
         % subresults saves timing as frames, change to seconds
 
     % Major Steps:
         % Add Instructions
         % Add practice!! (for practice also add "practice label "
-        % Include GUI and Option to re-start in the middle.
+        % Include Option to re-start in the middle.
         % Test code functionality for the whole experiment
         % EEG Prep Code
 
     % Discuss with Assaf:
         % Constraints for Matrix Shuffle
         % Review timing of different trial types (random values used so far)
-         % Add gamification?
+        % Add gamification?
 
 
 % Requires the custom functions  PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m
@@ -28,124 +24,171 @@
 sca;
 close all;
 clear;
-clear mex;
+%clear mex;
 
 % Initialize Structs
 scr=[]; % Everything related to PTB Screen
 stim=[]; % Stimulus Information
 time=[]; % Timing Information
 
-%% Run Code GUI
+cd 'C:\Users\cbruckmann\Documents\PhD Projects\Proj2 - PhaseFlip\Pilot\Experiment Code Pilot'
+%% Input GUI
 input_complete=0;
 while ~ input_complete
     % Which type of settings would you like?
     title = 'What would you like to do?';
-    options = {'Participant', 'Trigger Check', 'Debugging', 'Oscilloscope Test'};
+    options = {'Run Participant', 'Trigger Check', 'Oscilloscope Test','Debugging'};
 
     run_type = centeredMenu(title, options{:});
 
     switch run_type
         case 0
-            error("Please select what you would like to do.")
-        case 1 % Participant
+            f=errordlg("Please select what you would like to do.");
+            uiwait(f)
+        case 1 % Running a participant
             floatwin=0; % Take over whole screen (0) or just part of it (1)
-            SkipSync=0; % Skip Synch (1 when testing on laptop)
+            SkipSync=1; % Skip Sync Tests (1 when testing on laptop)
             testing=0; % testing the code? reduces amount of trials to a minimum
             speedrun=0; % automatically chooses a response, no need to manually click anything (used for testing the code)
-            scr.unlock_code="123"; % code needed for sections where only the experimenter can proceed to the next slide (using unlock_continue.m, always press enter at the end of the code)
+            scr.scope=0; % run scope test?
+
+            % Experiment Sections
+            JND_task=1; % JND Task?
+            staircase=1; % Staircase?
+            practice=1; % Practice?
+
+            % Input Subject Number
+            sub_num_compl=0;
+            subresults.subj_num=[];
+            valid_subnumber=0;
+            while ~sub_num_compl
+                while ~valid_subnumber
+                    subresults.subj_num =  str2double(string(inputdlg('Subject Number:')));
+                    if ~isempty(subresults.subj_num) % If number has been entered, check if it is a valid number
+                        isWholePositiveInteger = isnumeric(subresults.subj_num) && isfinite(subresults.subj_num) && subresults.subj_num > 0 && mod(subresults.subj_num,1) == 0;
+                        if isWholePositiveInteger
+                            valid_subnumber=1;
+                        else
+                            f=errordlg("Subject number must be a whole positive integer.");
+                            uiwait(f)
+                        end
+                    end
+                end
+
+                % Check if a file for this participant already exists
+                savefilename=sprintf("Pilot_PhaseFlip_Subj%i",subresults.subj_num);
+                try
+                    load(savefilename) % Try to load a file with this name, if it exists ask if this should be used
+                    answer = questdlg('Subject already exists. Load existing file?','Existing Subject', 'Yes','Return.','Return.');
+                    switch answer
+                        case 'Yes'
+                            % Start where the participant has left off?
+                            answer = questdlg('Reloading file. Start where the participant left off?','Existing Subject', 'Yes','No - restart.');
+                            switch answer
+                                case 'Yes'
+                                     sub_num_compl=1;
+                                case 'No - restart.'
+                                    old_subresults=subresults; % save previous results in file under new name
+                                    save(savefilename,old_subresults)
+                                    subresults=[]; % restart with clean subresults
+                                    save(savefilename,subresults)
+                                    f=msgbox("New file created.");
+                                    uiwait(f)
+                                    sub_num_compl=1;
+                            end
+                        case 'Return'
+                            continue % Re-enter subject number
+                    end
+                catch ME
+                    answer = questdlg('New subject. Create a new file?','New Subject', 'Yes','Return','Return');
+                    % Handle response
+                    switch answer
+                        case 'Yes'
+                            save(savefilename,"subresults");
+                            f=msgbox("New file created.");
+                            uiwait(f)
+                            sub_num_compl=1;
+                        case 'Return'
+                            continue % Re-enter subject number
+                    end
+                end
+            end
+
+            % Input Experimenter Name
+            subresults.experimenter = {};
+            while true
+                answer = inputdlg('Experimenter Name:');
+                if isempty(answer)  % User closed the dialog without entering anything
+                    continue;       % Reopen the dialog
+                elseif ~isempty(strtrim(answer{1}))  % Check if input is non-empty and not just spaces
+                    subresults.experimenter = string(answer);  % Valid input, exit the loop
+                    break;
+                end
+            end
+
+            input_complete=1;
         case 2 % Trigger Check
-            floatwin=1; % Take over whole screen (0) or just part of it (1)
-            SkipSync=1; % Skip Synch (1 when testing on laptop)
-            testing=1; % testing the code? reduces amount of trials to a minimum
-            speedrun=1; % automatically chooses a response, no need to manually click anything (used for testing the code)
-            scr.unlock_code="123"; % code needed for sections where only the experimenter can proceed to the next slide (using unlock_continue.m, always press enter at the end of the code)
-        case 3 % Debugging
-            floatwin=1; % Take over whole screen (0) or just part of it (1)
-            SkipSync=1; % Skip Synch (1 when testing on laptop)
-            testing=1; % testing the code? reduces amount of trials to a minimum
-            speedrun=1; % automatically chooses a response, no need to manually click anything (used for testing the code)
-            scr.unlock_code="123"; % code needed for sections where only the experimenter can proceed to the next slide (using unlock_continue.m, always press enter at the end of the code)
-        case 4 % Oscilloscope Test
-            floatwin=1; % Take over whole screen (0) or just part of it (1)
-            SkipSync=1; % Skip Synch (1 when testing on laptop)
-            testing=1; % testing the code? reduces amount of trials to a minimum
-            speedrun=1; % automatically chooses a response, no need to manually click anything (used for testing the code)
-            scr.unlock_code="123"; % code needed for sections where only the experimenter can proceed to the next slide (using unlock_continue.m, always press enter at the end of the code)
-    end
+            % Jumps directly to the real experiment to test a trial, this skips JND, Staircase and Practice
+            floatwin=0; 
+            SkipSync=0; 
+            testing=0;
+            speedrun=0;
+            scr.scope=0;
 
-    run_type = questdlg('What would you like to do?', 'Test', 'Participant', 'Trigger Check', 'Debugging','Oscilloscope Test');
+            % Experiment Sections
+            JND_task=0; 
+            staircase=0; 
+            practice=0; 
 
-    prompt = {'Product Name:','Product Type:'};
-    dlgtitle = 'Product Information';
-    fieldsize = [1 48; 1 48];
-    productdetails = string(inputdlg(prompt,dlgtitle,fieldsize));
+            savefilename=sprintf('trigger_test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
+            input_complete=1;
+        case 3 % Oscilloscope Test
+            floatwin=0; 
+            SkipSync=0; 
+            testing=0;
+            speedrun=0; 
+            scr.scope=1;
 
-    % Was the user allerigic?
-    allergic = questdlg('Did you have an allergic reaction to the product?', 'Allergic?', 'Yes','No','No');
+            input_complete=1;
+        case 4 % Debugging
+            % Choose which debugging options you want
+            prompt = 'Select debugging options:';
+            options = {'Reduced_TrialN', 'Speedrun', 'JNDTask','Staircase','Practice','SkipSync','Floating_Window'};
 
-    % Summarize and Confirm
-    prompt = sprintf('Product Name: %s \n\nProduct Type: %s \n\nAllergic: %s \n\nCorrect? ',productdetails{1},productdetails{2},allergic);
-    info_confirmed = questdlg(prompt, 'Confirm?', 'Yes','No','No');
+            % Display list dialog and get selected indices
+            [selectedIndices, ~] = listdlg('PromptString', prompt, ...
+                'ListString', options, ...
+                'SelectionMode', 'multiple', ...
+                'OKString', 'Select', ...
+                'CancelString', 'Cancel');
 
-    % Evaluate Response and Register (else repeat question)
-    if contains( 'Yes',info_confirmed,'IgnoreCase',true)
-        % Add information to table
-        AllergyDatabase.Product(end)=string(productdetails{1});
-        AllergyDatabase.Type(end)=productdetails{2};
-        if contains('Yes',allergic,'IgnoreCase',true)
-            AllergyDatabase.Allergic(end)=true;
-        else
-            AllergyDatabase.Allergic(end)=false;
-        end
-        prod_info_correct=1;
+            % Initialize struct to store variables
+            varStruct = struct();
+
+            % Assign values based on selection
+            for i = 1:length(options)
+                if ismember(i, selectedIndices)
+                    varStruct.(options{i}) = 1;
+                else
+                    varStruct.(options{i}) = 0;
+                end
+            end
+
+            % Debugging Options Chosen
+            testing = varStruct.(options{1});
+            speedrun = varStruct.(options{2});
+            JND_task = varStruct.(options{3});
+            staircase = varStruct.(options{4});
+            practice = varStruct.(options{5});
+            SkipSync=varStruct.(options{6});
+            floatwin=varStruct.(options{7});
+            
+            savefilename=sprintf('test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
+            scr.scope=0;
+            input_complete=1;
     end
 end
 
-%% Check if subject number already exists
-% % Search for 'AllergyDatabase' and add a new row, if not found, create new table
-% try
-%     load AllergyDatabase.mat
-%     AllergyDatabase(end+2,:)=AllergyDatabase(1,:);
-%     AllergyDatabase(end,:)=[];
-%     % Ask if old one should be used
-%     % read in all the data already known
-% catch
-%     disp('No existing database found. A new one was created.')
-%     %     AllergyDatabase = array2table(zeros(1,3));
-%     %     AllergyDatabase.Properties.VariableNames = {'Product','Type','Allergic'};
-%     %     AllergyDatabase.Properties.VariableTypes = {'string','string','logical'};
-% 
-%     sz = [1 3];
-%     varTypes = ["string","string","logical"];
-%     varNames = ["Product","Type","Allergic"];
-%     AllergyDatabase = table('Size',sz,'VariableTypes',varTypes,'VariableNames',varNames);
-% end
-%% Usability Parameters
-
-% Debugging and Testing
-floatwin=1; % Take over whole screen (0) or just part of it (1)
-SkipSync=1; % Skip Synch (1 when testing on laptop)
-testing=1; % testing the code? reduces amount of trials to a minimum
-speedrun=1; % automatically chooses a response, no need to manually click anything (used for testing the code)
-scr.unlock_code="123"; % code needed for sections where only the experimenter can proceed to the next slide (using unlock_continue.m, always press enter at the end of the code)
-
-% Oscilloscope Testing?
-scr.scope=0; % Oscilloscope Testing?
-if scr.scope % deactivate anything that interferes with it. 
-    floatwin=0;
-    SkipSync=0;
-    speedrun=0;
-end
-
-% Experiment Sections
-JND_task=0; % JND Task?
-staircase=0; % Staircase?
- 
-
-% Savefilename (add subj num here etc.)
-% if testing
-savefilename='test.mat';
-% end
 %% PTB Set-Up
 
 % Setup PTB
@@ -310,7 +353,7 @@ Screen('Flip', scr.win);
 
 %  Noise Mask
 for fridx=1:maxframesnoise*4 % make 4 times the amount of frames just to be sure and also for JND task more are needed.
-    if scr.scope % If oscillosope test, make mask as dark as possible
+    if scr.scope% If oscillosope test, make mask as dark as possible
         stim.noiseimg=0.01+stim.maskintensity*(rand(stim.rectSize)-0.5);
         stim.noiseimg = min(max(stim.noiseimg, 0), 1); % confirm values are between 0 and 1
     else
@@ -371,8 +414,8 @@ stim.gaborLeft=imRleft.*gaussEnvt;
  subresults.trialmatrix=trialmatrix;
  subresults.screeninfo=scr;
  subresults.textinfo=text;
- save(savefilename, 'subresults')
 
+ save(savefilename, 'subresults')
  %% Oscilloscope Test
  if scr.scope
      scopedone=0;
