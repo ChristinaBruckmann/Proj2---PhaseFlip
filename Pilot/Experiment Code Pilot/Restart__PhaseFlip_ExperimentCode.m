@@ -1,17 +1,16 @@
 %% Experiment Code Project 2 - Phase Flip
 % To do:
 
+        
     % Minor Fixes:
         % jitter duration for noise presentation before and after each trial
+        % Add file name 
         % Subresults saves timing as frames, change to seconds
-        % recalculate max-frames
-        % Option to adjust gabor intensity after block 1?
-        % Add block label during experiment?
-        % Display performance after each block?
 
     % Major Steps:
         % Add Instructions
-        % Add practice
+        % Add practice!! (for practice also add "practice label ")
+        % Include GUI and Option to re-start in the middle.
         % Test code functionality for the whole experiment
         % EEG Prep Code
 
@@ -37,9 +36,6 @@ time=[]; % Timing Information
 cd 'C:\Users\cbruckmann\Documents\PhD Projects\Proj2 - PhaseFlip\Pilot\Experiment Code Pilot'
 %% Input GUI
 input_complete=0;
-reload_data=0; % default: do not reload
-scr.unlock_code=["123"]; % code entered by experimenter before code continues (at certain points)
-
 while ~ input_complete
     % Which type of settings would you like?
     title = 'What would you like to do?';
@@ -49,26 +45,25 @@ while ~ input_complete
 
     switch run_type
         case 0
-            %             f=errordlg("Please select what you would like to do.");
-            %             uiwait(f)
-            error('Terminated by user.')
+            f=errordlg("Please select what you would like to do.");
+            uiwait(f)
         case 1 % Running a participant
             floatwin=0; % Take over whole screen (0) or just part of it (1)
             SkipSync=1; % Skip Sync Tests (1 when testing on laptop)
-            testing=1; % testing the code? reduces amount of trials to a minimum
-            speedrun=1; % automatically chooses a response, no need to manually click anything (used for testing the code)
+            testing=0; % testing the code? reduces amount of trials to a minimum
+            speedrun=0; % automatically chooses a response, no need to manually click anything (used for testing the code)
             scr.scope=0; % run scope test?
 
             % Experiment Sections
-            JND_task=0; % JND Task?
-            staircase=0; % Staircase?
+            JND_task=1; % JND Task?
+            staircase=1; % Staircase?
             practice=1; % Practice?
 
             % Input Subject Number
             sub_num_compl=0;
             subresults.subj_num=[];
+            valid_subnumber=0;
             while ~sub_num_compl
-                valid_subnumber=0;
                 while ~valid_subnumber
                     subresults.subj_num =  str2double(string(inputdlg('Subject Number:')));
                     if ~isempty(subresults.subj_num) % If number has been entered, check if it is a valid number
@@ -86,27 +81,24 @@ while ~ input_complete
                 savefilename=sprintf("Pilot_PhaseFlip_Subj%i",subresults.subj_num);
                 try
                     load(savefilename) % Try to load a file with this name, if it exists ask if this should be used
-                    answer = questdlg('Subject already exists. Continue?','Existing Subject', 'Yes','No, change number.','No, change number.');
+                    answer = questdlg('Subject already exists. Load existing file?','Existing Subject', 'Yes','Return.','Return.');
                     switch answer
                         case 'Yes'
                             % Start where the participant has left off?
-                            restart_text=sprintf('Reloading file.\n\nLast completed block: %i \n\nContinue with block %i?',subresults.status.last_block,subresults.status.last_block+1);
-                            answer = questdlg(restart_text,'Existing Subject', 'Yes','No - restart.','Yes');
+                            answer = questdlg('Reloading file. Start where the participant left off?','Existing Subject', 'Yes','No - restart.');
                             switch answer
                                 case 'Yes'
-                                    % Mark the reload
-                                    reload_data=1;
-                                    sub_num_compl=1;
+                                     sub_num_compl=1;
                                 case 'No - restart.'
                                     old_subresults=subresults; % save previous results in file under new name
+                                    save(savefilename,old_subresults)
                                     subresults=[]; % restart with clean subresults
-                                    subresults.old_subresults=old_subresults;
-                                    save(savefilename,"subresults")
-                                    f=msgbox(sprintf("Previous results saved.\n\nNew file created."));
+                                    save(savefilename,subresults)
+                                    f=msgbox("New file created.");
                                     uiwait(f)
                                     sub_num_compl=1;
                             end
-                        case 'No, change number.'
+                        case 'Return'
                             continue % Re-enter subject number
                     end
                 catch ME
@@ -257,11 +249,7 @@ stim.noiseMean= 50;
 
 % Gabor Parameters
 stim.maskintensity=0.6;
-if ~reload_data
-    gaborpercent=1-stim.maskintensity; % Initialize like this, adjust with staircase later
-else % load previous gabor intensity
-    gaborpercent=subresults.status.gaborintensity;
-end
+gaborpercent=1-stim.maskintensity; % Initialize like this, adjust with staircase later
 
 % Cue parameters for scope test
 stim.baseRect = [0 0 120 120];
@@ -291,6 +279,7 @@ text.JND_instructions={'JND_Task. \n\n Continue with arrows.';'Instructions Page
 
 
 %% Create Trial Matrix and Design
+
 % 400 trials in total (bit less than 45 min at 5,5 seconds per trial)
 % 50 trials per block
 % 8 blocks
@@ -330,34 +319,31 @@ else % experiment settings
     end
 end
 
-if ~reload_data % only create new matrix if there is no previous one
-    % Create trial matrix
-    trialmatrix=[]; % Preallocate matrix
-    for bl=1:nblocks % Create all blocks
-        if cond(bl)==1
-            trialtimes=time.trialtimes1;
-        else
-            trialtimes=time.trialtimes2;
-        end
-        timecatch=NaN; % here NaN (since invisible), in trial function random timing assigned for functionality
-
-        ntrialtypes=[nregular nirregular nlong nshort ncatchtrials];
-
-        % Create array of 50 trials with the desired split
-        trialmatrix_temp=[];
-        for tt=1:length(ntrialtypes)
-            temp=[tt trialtimes(tt) cond(bl) bl]; % trialtype trialtime condition nblock
-            temp=repmat(temp,ntrialtypes(tt),1); % repeat as many times as needed for this trial type
-            trialmatrix_temp=[trialmatrix_temp; temp]; % append to block matrix
-        end
-
-        % Shuffle (ADD CONTRAINTS!)
-        trialmatrix_temp=trialmatrix_temp(randperm(size(trialmatrix_temp,1)),:);
-
-        % Append to main matrix
-        trialmatrix=[trialmatrix; trialmatrix_temp];
+% Create trial matrix 
+trialmatrix=[]; % Preallocate matrix
+for bl=1:nblocks % Create all blocks
+    if cond(bl)==1
+        trialtimes=time.trialtimes1;
+    else
+        trialtimes=time.trialtimes2;
     end
-    subresults.trialmatrix=trialmatrix;
+    timecatch=NaN; % here NaN (since invisible), in trial function random timing assigned for functionality
+
+    ntrialtypes=[nregular nirregular nlong nshort ncatchtrials];
+
+    % Create array of 50 trials with the desired split
+    trialmatrix_temp=[];
+    for tt=1:length(ntrialtypes)
+        temp=[tt trialtimes(tt) cond(bl) bl]; % trialtype trialtime condition nblock
+        temp=repmat(temp,ntrialtypes(tt),1); % repeat as many times as needed for this trial type
+        trialmatrix_temp=[trialmatrix_temp; temp]; % append to block matrix
+    end
+
+    % Shuffle (ADD CONTRAINTS!)
+    trialmatrix_temp=trialmatrix_temp(randperm(size(trialmatrix_temp,1)),:);
+
+    % Append to main matrix
+    trialmatrix=[trialmatrix; trialmatrix_temp];
 end
 %% Create Stimuli
 
@@ -417,30 +403,21 @@ gaussEnvt = exp(-1.*(x.^2+y.^2)./sigma.^2); % create gaussian envelope (target)
 gaussEnvt(gaussEnvt<0.01)=0; % change close-to-zero peripheral elements to zero
 stim.gaborRight=imRright.*gaussEnvt;
 stim.gaborLeft=imRleft.*gaussEnvt;
-% Embedding it in mask happens lower after the intensity has been chosen
+ % Embedding it in mask happens lower after the intensity has been chosen
+ 
 
+ % %% Oscilloscope Test
+ % DrawFormattedText(scr.win, 'Welcome to the Oscilloscope Testing Environment \n\n Press any button to continue.', 'center', 'center', scr.fontcolour);
+ % Screen('Flip', scr.win);
+ % responsetext=sprintf("Which condition would you like to test? \n\n\n 1) %i seconds \n\n 2) %i seconds ",)
+ % [response,resp_eval]=respfunction(scr.win,responsetext,responsebuttons,responsemapping,graceful_abort,fontcolour)
+ %% Save all parameters and other info
+ subresults.trialmatrix=trialmatrix;
+ subresults.screeninfo=scr;
+ subresults.textinfo=text;
+ save(savefilename, 'subresults')
 
-% %% Oscilloscope Test
-% DrawFormattedText(scr.win, 'Welcome to the Oscilloscope Testing Environment \n\n Press any button to continue.', 'center', 'center', scr.fontcolour);
-% Screen('Flip', scr.win);
-% responsetext=sprintf("Which condition would you like to test? \n\n\n 1) %i seconds \n\n 2) %i seconds ",)
-% [response,resp_eval]=respfunction(scr.win,responsetext,responsebuttons,responsemapping,graceful_abort,fontcolour)
-%% Save all parameters and other info
-if ~reload_data % if no previous data is being loaded, set progress to zero
-    subresults.status.JND_done=0;
-    subresults.status.practice_done=0;
-    subresults.status.staircase_done=0;
-    subresults.status.last_block=0;
-    %subresults.status.last_trial=0;
-else
-    resulttable=subresults.data; % reload previous results data into table
-end
-subresults.screeninfo=scr;
-subresults.textinfo=text;
-save(savefilename, "subresults")
-
-startblock=subresults.status.last_block+1;
-%% Oscilloscope Test
+ %% Oscilloscope Test
  if scr.scope
      scopedone=0;
      
@@ -470,7 +447,6 @@ startblock=subresults.status.last_block+1;
                  newvalue=scope_dur;
                  adjusting=0;
              elseif strcmp(KbName(keyName),'e')==1 % exit with e
-                 ListenChar(0); % Restore default input handling
                  scopedone=1;
                  sca
                  return
@@ -496,100 +472,81 @@ try
     ListenChar(2);
 
      % Introduction
-     if ~reload_data
-         starttext='Welcome to the experiment. \n\n Press any button to start.';
-     else
-         starttext=sprinftf('Welcome back. \n\n  Press any button to continue.');
-     end
-     DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
-     Screen('Flip', scr.win);
-     KbStrokeWait;
+    DrawFormattedText(scr.win,'Welcome to the experiment. \n\n Press any button to start.', 'center', 'center', scr.fontcolour);
+    Screen('Flip', scr.win);
+    KbStrokeWait;
 
     % JND Task
-    if ~ subresults.status.JND_done
-        while JND_task
-            [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
-            % Plot results and flip to screen
-            Screen('Flip', scr.win);
-            JND_fig = figure('Visible', 'off'); % make invisible figure
-            plot(1:length(JND_results.Comparison), JND_results.Comparison, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Comparison)]); ylim([min(JND_results.Comparison)-1 max(JND_results.Comparison)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
-            PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
-            Screen('Flip', scr.win);
-            unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
-
-            % Confirm or repeat
-            adjusttext=sprintf('Comparison Value: %f \n\n Confirm (1) or Repeat (0)?',JND);
-            [response]=respfunction(scr.win,adjusttext,["1","0"]);
-            if double(response)==0 % if adjustment requested, ask for confirmation
-                confirmationtext='Are you sure? \n\n Do not repeat unless you are sure something went wrong the first time. \n\n\n\n Accept staircase value (1) or Adjust anyway (0)?';
-                [response]=respfunction(scr.win,confirmationtext,["1","0"]);
-                if  double(response)==0
-                    % Save previous results and repeat JND task
-                    subresults.JND_res_discarded=JND_results;
-                    subresults.JND_discarded=JND;
-                    save(savefilename, 'subresults')
-                else
-                    %Save results
-                    subresults.JND_results=JND_results;
-                    subresults.JND=JND;
-                    save(savefilename, 'subresults')
-                    JND_task=0; % Exit JND Task
-                end
+    while JND_task
+        [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
+        % Plot results and flip to screen
+        Screen('Flip', scr.win);
+        JND_fig = figure('Visible', 'off'); % make invisible figure
+        plot(1:length(JND_results.Comparison), JND_results.Comparison, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Comparison)]); ylim([min(JND_results.Comparison)-1 max(JND_results.Comparison)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
+        PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
+        Screen('Flip', scr.win);
+        unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
+       
+        % Confirm or repeat
+        adjusttext=sprintf('Comparison Value: %f \n\n Confirm (1) or Repeat (0)?',JND);
+        [response]=respfunction(scr.win,adjusttext,["1","0"]);
+        if double(response)==0 % if adjustment requested, ask for confirmation
+            confirmationtext='Are you sure? \n\n Do not repeat unless you are sure something went wrong the first time. \n\n\n\n Accept staircase value (1) or Adjust anyway (0)?';
+           [response]=respfunction(scr.win,confirmationtext,["1","0"]);
+            if  double(response)==0
+                % Save previous results and repeat JND task
+                subresults.JND_res_discarded=JND_results;
+                subresults.JND_discarded=JND;
+                save(savefilename, 'subresults')
             else
                 %Save results
                 subresults.JND_results=JND_results;
                 subresults.JND=JND;
-                subresults.status.JND_done=1;
                 save(savefilename, 'subresults')
                 JND_task=0; % Exit JND Task
             end
+        else
+            %Save results
+            subresults.JND_results=JND_results;
+            subresults.JND=JND;
+            save(savefilename, 'subresults')
+            JND_task=0; % Exit JND Task
         end
     end
 
     % Staircase
-    if staircase && ~subresults.status.staircase_done
+    if staircase
         [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent);
     end
 
     % Accept Staircase Output or Adjust Gabor Difficulty
-    if ~reload_data
-        adjusttext=sprintf('Post-staircase intensity: %f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
-    else
-        adjusttext=sprintf('Last Intensity: %f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
-    end
-
+    adjusttext=sprintf('Post-staircase intensity: %f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
     [response]=respfunction(scr.win,adjusttext,["2","3"]);
     if double(response)==3 % if adjustment requested, ask for confirmation
         confirmationtext='Are you sure? \n\nIt is reccommended to stick to the staircase value. \n\n\n\n Accept staircase value (2) or Adjust anyway (3)?';
-        [response]=respfunction(scr.win,confirmationtext,["2","3"]);
+        [response]=respfunction(scr.win,confirmationtext);
         if double(response)==3
-             gaborpercent=adjustintensity(scr, gaborpercent);
+             gaborpercent=adjustintensity(scr.win, gaborpercent);
         end  
     end
 
-    % Save and Display the setting that will be used
-    subresults.status.gaborintensity=gaborpercent;
-    save(savefilename,"subresults")
+    % Display the setting that will be used
     intconfirmed=sprintf('Confirmed Intensity: %f \n\n\n\nPress any button to continue.',gaborpercent);
     DrawFormattedText(scr.win,intconfirmed, 'center', 'center', scr.fontcolour);
     Screen('Flip', scr.win);
     KbStrokeWait;
 
     % Run Blocks
-    if reload_data
-        tottrialcount=subresults.status.last_block*ntrials+1; % start at first trial of next block
-    else
-        tottrialcount=1; % total trial counter
-    end
+    tottrialcount=1; % total trial counter
   
-    for b=startblock:nblocks
+    for b=1:nblocks
 
         % Determine current condition
         currcond=cond(b);
 
         % Run Trials
         for t=1:ntrials
-            trialinfo=subresults.trialmatrix(tottrialcount,:); % Choose trialinfo from trialmatrix
+            trialinfo=trialmatrix(tottrialcount,:); % Choose trialinfo from trialmatrix
 
             [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,gaborpercent,trialinfo,speedrun); % Run trial
 
@@ -597,19 +554,14 @@ try
                 resulttable(tottrialcount,:)=table(currcond, b, t, trialinfo(1), trialinfo(2),RT, Resp, RespEval, warning, gaborpercent,stim.maskintensity, 'VariableNames',{'Condition','Block', ...
                     'Trial','Trial Type','Target Interval','Reaction Time', 'Orientation Reseponse', 'Correct/Incorrect', 'Late Warning', 'Gabor Strength','Mask Intensity'});
                 subresults.data=resulttable;
+                save('test.mat', 'subresults')
                 tottrialcount=tottrialcount+1; % update total trial counter
-                %subresults.status.last_trial=tottrialcount; % save status
-                save(savefilename,"subresults");
             else % repeat the trial and do not save output
                 DrawFormattedText(scr.win,'Press any button to continue the task.', 'center', 'center', scr.fontcolour);
                 Screen('Flip', scr.win);
                 KbStrokeWait;
             end
         end
-
-        % Update Status
-        subresults.status.last_block=b; % save status
-        save(savefilename,"subresults");
 
         % End of block/experiment message
         if b==nblocks
@@ -635,7 +587,6 @@ try
                     Screen('Flip', scr.win);
                     [~, keyNamethr, ~]=KbStrokeWait;
                     if KbName(keyNamethr)=="e"
-                        ListenChar(0); % Restore default input handling
                         sca
                         return
                     elseif KbName(keyNamethr)=="c"
@@ -778,7 +729,6 @@ if ~speed && ~scr.scope % if not in speed run mode or scope test, ask question a
                 Screen('Flip', scr.win);
                 [~, keyNamethr, ~]=KbStrokeWait;
                 if strcmp(KbName(keyNamethr),'e')
-                    ListenChar(0); % Restore default input handling
                     sca
                     return
                 elseif strcmp(KbName(keyNamethr),'c')
@@ -835,7 +785,6 @@ currlevel=gaborcontrast;
             newintensity=currlevel;
             adjusting=0;
         elseif strcmp(KbName(keyName),'e')==1 % exit with e
-            ListenChar(0); % Restore default input handling
             sca
             return
         end

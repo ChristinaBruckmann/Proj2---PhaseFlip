@@ -6,12 +6,12 @@
         % Subresults saves timing as frames, change to seconds
         % recalculate max-frames
         % Option to adjust gabor intensity after block 1?
-        % Add block label during experiment?
+        % Add block lable during experiment?
         % Display performance after each block?
 
     % Major Steps:
         % Add Instructions
-        % Add practice
+        % Add practice!! (for practice also add "practice label ")
         % Test code functionality for the whole experiment
         % EEG Prep Code
 
@@ -497,13 +497,13 @@ try
 
      % Introduction
      if ~reload_data
-         starttext='Welcome to the experiment. \n\n Press any button to start.';
+    starttext='Welcome to the experiment. \n\n Press any button to start.';
      else
-         starttext=sprinftf('Welcome back. \n\n  Press any button to continue.');
+       starttext=sprinftf('Welcome back. \n\n  Press any button to continue.');
      end
      DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
-     Screen('Flip', scr.win);
-     KbStrokeWait;
+    Screen('Flip', scr.win);
+    KbStrokeWait;
 
     % JND Task
     if ~ subresults.status.JND_done
