@@ -5,11 +5,11 @@
     % Minor Fixes:
         % jitter duration for noise presentation before and after each trial
         % Add file name 
-        % subresults saves timing as frames, change to seconds
+        % Subresults saves timing as frames, change to seconds
 
     % Major Steps:
         % Add Instructions
-        % Add practice!! (for practice also add "practice label "
+        % Add practice!! (for practice also add "practice label ")
         % Include GUI and Option to re-start in the middle.
         % Test code functionality for the whole experiment
         % EEG Prep Code
@@ -17,7 +17,7 @@
     % Discuss with Assaf:
         % Constraints for Matrix Shuffle
         % Review timing of different trial types (random values used so far)
-         % Add gamification?
+        % Add gamification?
 
 
 % Requires the custom functions  PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m
