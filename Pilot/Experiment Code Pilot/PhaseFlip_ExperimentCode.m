@@ -4,22 +4,20 @@
     % Minor Fixes:
         % jitter duration for noise presentation before and after each trial
         % Subresults saves timing as frames, change to seconds
-        % recalculate max-frames
+        % Recalculate max-frames
         % Option to adjust gabor intensity after block 1?
-        % Add block label during experiment?
-        % Display performance after each block?
+        % Test if practice works
 
     % Major Steps:
-        % Add Instructions
-        % Add practice
-        % Test code functionality for the whole experiment
+        % Write Instructions
         % EEG Prep Code
+        % Test code functionality for the whole experiment
 
     % Discuss with Assaf:
         % Constraints for Matrix Shuffle
         % Review timing of different trial types (random values used so far)
         % Add gamification?
-
+        % Add block label to the experiment?
 
 % Requires the custom functions  PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m
 
@@ -62,7 +60,7 @@ while ~ input_complete
             % Experiment Sections
             JND_task=0; % JND Task?
             staircase=0; % Staircase?
-            practice=1; % Practice?
+            easypractice=1; % Practice?
 
             % Input Subject Number
             sub_num_compl=0;
@@ -148,7 +146,7 @@ while ~ input_complete
             % Experiment Sections
             JND_task=0; 
             staircase=0; 
-            practice=0; 
+            easypractice=0; 
 
             savefilename=sprintf('trigger_test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
             input_complete=1;
@@ -163,7 +161,7 @@ while ~ input_complete
         case 4 % Debugging
             % Choose which debugging options you want
             prompt = 'Select debugging options:';
-            options = {'Reduced_TrialN', 'Speedrun', 'JNDTask','Staircase','Practice','SkipSync','Floating_Window'};
+            options = {'Reduced_TrialN', 'Speedrun', 'JNDTask','Staircase','Easy Practice','SkipSync','Floating_Window'};
 
             % Display list dialog and get selected indices
             [selectedIndices, ~] = listdlg('PromptString', prompt, ...
@@ -189,7 +187,7 @@ while ~ input_complete
             speedrun = varStruct.(options{2});
             JND_task = varStruct.(options{3});
             staircase = varStruct.(options{4});
-            practice = varStruct.(options{5});
+            easypractice = varStruct.(options{5});
             SkipSync=varStruct.(options{6});
             floatwin=varStruct.(options{7});
             
@@ -257,6 +255,8 @@ stim.noiseMean= 50;
 
 % Gabor Parameters
 stim.maskintensity=0.6;
+practicegabor=0.7; % practice gabor intensity for easy practice
+
 if ~reload_data
     gaborpercent=1-stim.maskintensity; % Initialize like this, adjust with staircase later
 else % load previous gabor intensity
@@ -287,9 +287,11 @@ circleweak= 0.5; % how weak is the circle compared to mask (lower means less con
 text.keyleft="l";
 text.keyright="r";
 
-text.JND_instructions={'JND_Task. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
-
-
+text.JND_instructions={'JND Task. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
+text.practice_instructions={'Practice. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
+text.staircase_instructions={'Staircase. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
+text.block1_instructions={'Block 1. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
+text.block2_instructions={'Block 2. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
 %% Create Trial Matrix and Design
 % 400 trials in total (bit less than 45 min at 5,5 seconds per trial)
 % 50 trials per block
@@ -489,171 +491,226 @@ startblock=subresults.status.last_block+1;
 
      end
  end
-%% Run Experiment
-try
+ %% Run Experiment
+ if ~scr.scope
+     try
 
-    % Suppress key presses in command window
-    ListenChar(2);
+         % Suppress key presses in command window
+         ListenChar(2);
 
-     % Introduction
-     if ~reload_data
-         starttext='Welcome to the experiment. \n\n Press any button to start.';
-     else
-         starttext=sprinftf('Welcome back. \n\n  Press any button to continue.');
+         % Introduction
+         if ~reload_data
+             starttext='Welcome to the experiment. \n\n Press any button to start.';
+         else
+             starttext='Welcome back. \n\n  Press any button to continue.';
+         end
+         DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
+         Screen('Flip', scr.win);
+         KbStrokeWait;
+
+         % JND Task
+         if ~ subresults.status.JND_done
+             while JND_task
+                 [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
+                 % Plot results and flip to screen
+                 Screen('Flip', scr.win);
+                 JND_fig = figure('Visible', 'off'); % make invisible figure
+                 plot(1:length(JND_results.Comparison), JND_results.Comparison, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Comparison)]); ylim([min(JND_results.Comparison)-1 max(JND_results.Comparison)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
+                 PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
+                 Screen('Flip', scr.win);
+                 unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
+
+                 % Confirm or repeat
+                 adjusttext=sprintf('Comparison Value: %f \n\n Confirm (1) or Repeat (0)?',JND);
+                 [response]=respfunction(scr.win,adjusttext,["1","0"]);
+                 if double(response)==0 % if adjustment requested, ask for confirmation
+                     confirmationtext='Are you sure? \n\n Do not repeat unless you are sure something went wrong the first time. \n\n\n\n Accept staircase value (1) or Adjust anyway (0)?';
+                     [response]=respfunction(scr.win,confirmationtext,["1","0"]);
+                     if  double(response)==0
+                         % Save previous results and repeat JND task
+                         subresults.JND_res_discarded=JND_results;
+                         subresults.JND_discarded=JND;
+                         save(savefilename, 'subresults')
+                     else
+                         %Save results
+                         subresults.JND_results=JND_results;
+                         subresults.JND=JND;
+                         save(savefilename, 'subresults')
+                         JND_task=0; % Exit JND Task
+                     end
+                 else
+                     %Save results
+                     subresults.JND_results=JND_results;
+                     subresults.JND=JND;
+                     subresults.status.JND_done=1;
+                     save(savefilename, 'subresults')
+                     JND_task=0; % Exit JND Task
+                 end
+             end
+         end
+
+         % Easy Practice
+         navipage(scr.win,text.practice_instructions) % Show instructions
+         while easypractice
+             [~, RespEval, ~, ~]=trialfunction(scr,time,text,stim,practicegabor,[6, 0.7],speed);
+             
+             % Print evaluation
+             if RespEval==1
+                 DrawFormattedText(scr.win,'Correct', 'center', 'center', scr.fontcolour);
+                 Screen('Flip', scr.win);
+                 pause(1)
+             else
+                 DrawFormattedText(scr.win,'Incorrect', 'center', 'center', scr.fontcolour);
+                 Screen('Flip', scr.win);
+                 pause(1)
+             end
+
+             % Another one? Or show instructions again? Or adjust gabor visibility?
+             while true
+                 response=respfunction(scr.win,'Repeat? (1) \n\n Show Instructions (2)? \n\n Adjust Visibility? (3) \n\n Continue? (4)',["1","2","3","4"]);
+                 switch double(response)
+                     case 1
+                         break % get out of the true loop and run another easy practice
+                     case 2
+                         navipage(scr.win,text.practice_instructions) % show instructions
+                         continue % then show the menu again
+                     case 3
+                         practicegabor=adjustintensity(scr,practicegabor); % adjust intensity
+                         continue %before returning to the menu
+                     case 4
+                         easypractice=0; % finish easy practice
+                         break % break out of true loop
+                 end
+             end
+         end
+
+         % Staircase
+         if staircase && ~subresults.status.staircase_done
+             navipage(scr.win,text.staircase_instructions) % Show instructions
+             [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent);
+         end
+
+         % Accept Staircase Output or Adjust Gabor Difficulty
+         if ~reload_data
+             adjusttext=sprintf('Post-staircase intensity: %f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
+         else
+             adjusttext=sprintf('Last Intensity: %f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
+         end
+
+         [response]=respfunction(scr.win,adjusttext,["2","3"]);
+         if double(response)==3 % if adjustment requested, ask for confirmation
+             confirmationtext='Are you sure? \n\nIt is reccommended to stick to the staircase value. \n\n\n\n Accept staircase value (2) or Adjust anyway (3)?';
+             [response]=respfunction(scr.win,confirmationtext,["2","3"]);
+             if double(response)==3
+                 gaborpercent=adjustintensity(scr, gaborpercent);
+             end
+         end
+
+         % Save and Display the setting that will be used
+         subresults.status.gaborintensity=gaborpercent;
+         save(savefilename,"subresults")
+         intconfirmed=sprintf('Confirmed Intensity: %f \n\n\n\nPress any button to continue.',gaborpercent);
+         DrawFormattedText(scr.win,intconfirmed, 'center', 'center', scr.fontcolour);
+         Screen('Flip', scr.win);
+         KbStrokeWait;
+
+         % Run Blocks
+         if reload_data
+             tottrialcount=subresults.status.last_block*ntrials+1; % start at first trial of next block
+         else
+             tottrialcount=1; % total trial counter
+         end
+
+         navipage(scr.win,text.block1_instructions) % Show instructions
+
+         for b=startblock:nblocks
+             starttext=sprintf('Ready? \n\n Press any key to start block %i',b);
+             DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
+             Screen('Flip', scr.win);
+             KbStrokeWait;
+
+             % Determine current condition
+             currcond=cond(b);
+
+             % Run Trials
+             for t=1:ntrials
+                 trialinfo=subresults.trialmatrix(tottrialcount,:); % Choose trialinfo from trialmatrix
+
+                 [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,gaborpercent,trialinfo,speedrun); % Run trial
+
+                 if ~isnan(Resp)% Save trial results
+                     resulttable(tottrialcount,:)=table(currcond, b, t, trialinfo(1), trialinfo(2),RT, Resp, RespEval, warning, gaborpercent,stim.maskintensity, 'VariableNames',{'Condition','Block', ...
+                         'Trial','Trial Type','Target Interval','Reaction Time', 'Orientation Reseponse', 'Correct/Incorrect', 'Late Warning', 'Gabor Strength','Mask Intensity'});
+                     subresults.data=resulttable;
+                     tottrialcount=tottrialcount+1; % update total trial counter
+                     %subresults.status.last_trial=tottrialcount; % save status
+                     save(savefilename,"subresults");
+                 else % repeat the trial and do not save output
+                     DrawFormattedText(scr.win,'Press any button to continue the task.', 'center', 'center', scr.fontcolour);
+                     Screen('Flip', scr.win);
+                     KbStrokeWait;
+                 end
+             end
+
+             % Update Status
+             subresults.status.last_block=b; % save status
+             save(savefilename,"subresults");
+
+             % Calculate block performance
+            blockperf=resulttable{find(resulttable{:,'Block'}==b),'Correct/Incorrect'}; % performance results for latest block
+            blockaccuracy=mean(blockperf,'omitnan'); % mean accuracy
+            totalperf=resulttable{:,'Correct/Incorrect'};
+            totalaccuracy= mean(totalperf,'omitnan'); % total accuracy of all trials SO FAR
+            accuracy=[blockaccuracy totalaccuracy];
+
+             % End of block/experiment message
+             if b==nblocks
+                 DrawFormattedText(scr.win,'This is the end of the experiment. \n\n Please wait for the experimenter.', 'center', 'center', scr.fontcolour);
+                 Screen('Flip', scr.win);
+                 unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
+
+                 DrawFormattedText(scr.win,'Data has been saved. \n\n Press any button to close the screen.', 'center', 'center', scr.fontcolour);
+                 Screen('Flip', scr.win);
+                 KbStrokeWait;
+             else
+                 next_block=0; % continue with next block?
+                 while ~next_block
+                     blockendmessage=sprintf('End of block %i/%i \n\nPlease take a break. \n\n \n\nPress the space bar to continue.',b,nblocks);
+                     DrawFormattedText(scr.win,blockendmessage, 'center', 'center', scr.fontcolour);
+                     % Print performance
+                     performancetext=sprintf('B%.2f24753 /n T%.2f45264', accuracy(1),accuracy(2)); % block and total
+                     [~,~,heightacc,lengthacc]=Screen('TextBounds', scr.win, performancetext); % get bounds
+                     DrawFormattedText(scr.win, performancetext, scr.axisx(1), scr.axisy(2)-heightacc*1.2,scr.fontcolour);
+                     Screen('Flip', scr.win);
+                     [~, keyNamethr, ~]=KbStrokeWait;
+                     % Exit?
+                     if KbName(keyNamethr)=="space"
+                         next_block=1;
+                     elseif KbName(keyNamethr)=="e"
+                         DrawFormattedText(scr.win,'Continue(c)? Exit(e)?', 'center', 'center',scr.fontcolour);
+                         Screen('Flip', scr.win);
+                         [~, keyNamethr, ~]=KbStrokeWait;
+                         if KbName(keyNamethr)=="e"
+                             ListenChar(0); % Restore default input handling
+                             sca
+                             return
+                         elseif KbName(keyNamethr)=="c"
+                             continue
+                         end
+                     end
+                 end
+             end
+         end
+         ListenChar(0); % Restore default input handling
+         sca;
+         ShowCursor;
+     catch
+         ListenChar(0); % Restore default input handling
+         sca;
+         ShowCursor;
+         psychrethrow(psychlasterror);
      end
-     DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
-     Screen('Flip', scr.win);
-     KbStrokeWait;
-
-    % JND Task
-    if ~ subresults.status.JND_done
-        while JND_task
-            [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
-            % Plot results and flip to screen
-            Screen('Flip', scr.win);
-            JND_fig = figure('Visible', 'off'); % make invisible figure
-            plot(1:length(JND_results.Comparison), JND_results.Comparison, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Comparison)]); ylim([min(JND_results.Comparison)-1 max(JND_results.Comparison)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
-            PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
-            Screen('Flip', scr.win);
-            unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
-
-            % Confirm or repeat
-            adjusttext=sprintf('Comparison Value: %f \n\n Confirm (1) or Repeat (0)?',JND);
-            [response]=respfunction(scr.win,adjusttext,["1","0"]);
-            if double(response)==0 % if adjustment requested, ask for confirmation
-                confirmationtext='Are you sure? \n\n Do not repeat unless you are sure something went wrong the first time. \n\n\n\n Accept staircase value (1) or Adjust anyway (0)?';
-                [response]=respfunction(scr.win,confirmationtext,["1","0"]);
-                if  double(response)==0
-                    % Save previous results and repeat JND task
-                    subresults.JND_res_discarded=JND_results;
-                    subresults.JND_discarded=JND;
-                    save(savefilename, 'subresults')
-                else
-                    %Save results
-                    subresults.JND_results=JND_results;
-                    subresults.JND=JND;
-                    save(savefilename, 'subresults')
-                    JND_task=0; % Exit JND Task
-                end
-            else
-                %Save results
-                subresults.JND_results=JND_results;
-                subresults.JND=JND;
-                subresults.status.JND_done=1;
-                save(savefilename, 'subresults')
-                JND_task=0; % Exit JND Task
-            end
-        end
-    end
-
-    % Staircase
-    if staircase && ~subresults.status.staircase_done
-        [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent);
-    end
-
-    % Accept Staircase Output or Adjust Gabor Difficulty
-    if ~reload_data
-        adjusttext=sprintf('Post-staircase intensity: %f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
-    else
-        adjusttext=sprintf('Last Intensity: %f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
-    end
-
-    [response]=respfunction(scr.win,adjusttext,["2","3"]);
-    if double(response)==3 % if adjustment requested, ask for confirmation
-        confirmationtext='Are you sure? \n\nIt is reccommended to stick to the staircase value. \n\n\n\n Accept staircase value (2) or Adjust anyway (3)?';
-        [response]=respfunction(scr.win,confirmationtext,["2","3"]);
-        if double(response)==3
-             gaborpercent=adjustintensity(scr, gaborpercent);
-        end  
-    end
-
-    % Save and Display the setting that will be used
-    subresults.status.gaborintensity=gaborpercent;
-    save(savefilename,"subresults")
-    intconfirmed=sprintf('Confirmed Intensity: %f \n\n\n\nPress any button to continue.',gaborpercent);
-    DrawFormattedText(scr.win,intconfirmed, 'center', 'center', scr.fontcolour);
-    Screen('Flip', scr.win);
-    KbStrokeWait;
-
-    % Run Blocks
-    if reload_data
-        tottrialcount=subresults.status.last_block*ntrials+1; % start at first trial of next block
-    else
-        tottrialcount=1; % total trial counter
-    end
-  
-    for b=startblock:nblocks
-
-        % Determine current condition
-        currcond=cond(b);
-
-        % Run Trials
-        for t=1:ntrials
-            trialinfo=subresults.trialmatrix(tottrialcount,:); % Choose trialinfo from trialmatrix
-
-            [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,gaborpercent,trialinfo,speedrun); % Run trial
-
-            if ~isnan(Resp)% Save trial results
-                resulttable(tottrialcount,:)=table(currcond, b, t, trialinfo(1), trialinfo(2),RT, Resp, RespEval, warning, gaborpercent,stim.maskintensity, 'VariableNames',{'Condition','Block', ...
-                    'Trial','Trial Type','Target Interval','Reaction Time', 'Orientation Reseponse', 'Correct/Incorrect', 'Late Warning', 'Gabor Strength','Mask Intensity'});
-                subresults.data=resulttable;
-                tottrialcount=tottrialcount+1; % update total trial counter
-                %subresults.status.last_trial=tottrialcount; % save status
-                save(savefilename,"subresults");
-            else % repeat the trial and do not save output
-                DrawFormattedText(scr.win,'Press any button to continue the task.', 'center', 'center', scr.fontcolour);
-                Screen('Flip', scr.win);
-                KbStrokeWait;
-            end
-        end
-
-        % Update Status
-        subresults.status.last_block=b; % save status
-        save(savefilename,"subresults");
-
-        % End of block/experiment message
-        if b==nblocks
-            DrawFormattedText(scr.win,'This is the end of the experiment. \n\n Please wait for the experimenter.', 'center', 'center', scr.fontcolour);
-            Screen('Flip', scr.win);
-            unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
-
-            DrawFormattedText(scr.win,'Data has been saved. \n\n Press any button to close the screen.', 'center', 'center', scr.fontcolour);
-            Screen('Flip', scr.win);
-            KbStrokeWait;
-        else
-            next_block=0; % continue with next block?
-            while ~next_block
-                blockendmessage=sprintf('End of block %i/%i \n\nPlease take a break. \n\n \n\nPress the space bar to continue.',b,nblocks);
-                DrawFormattedText(scr.win,blockendmessage, 'center', 'center', scr.fontcolour);
-                Screen('Flip', scr.win);
-                [~, keyNamethr, ~]=KbStrokeWait;
-                % Exit?
-                if KbName(keyNamethr)=="space"
-                    next_block=1;
-                elseif KbName(keyNamethr)=="e"
-                    DrawFormattedText(scr.win,'Continue(c)? Exit(e)?', 'center', 'center',scr.fontcolour);
-                    Screen('Flip', scr.win);
-                    [~, keyNamethr, ~]=KbStrokeWait;
-                    if KbName(keyNamethr)=="e"
-                        ListenChar(0); % Restore default input handling
-                        sca
-                        return
-                    elseif KbName(keyNamethr)=="c"
-                        continue
-                    end
-                end
-            end
-        end
-    end
-    ListenChar(0); % Restore default input handling
-    sca;
-    ShowCursor;
-catch
-    ListenChar(0); % Restore default input handling
-    sca;
-    ShowCursor;
-    psychrethrow(psychlasterror);
-end
+ end
 %% Trial Function
 function [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,gaborpercentin,trialinfoin,speed)
 % trialinfoin is the input for the trial information(type of trial and target interval duration from the trial matrix)
