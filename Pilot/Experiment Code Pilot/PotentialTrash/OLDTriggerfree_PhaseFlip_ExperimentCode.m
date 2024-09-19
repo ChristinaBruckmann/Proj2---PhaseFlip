@@ -7,6 +7,7 @@
         % Recalculate max-frames
         % Option to adjust gabor intensity after block 1?
         % Test if practice works
+        % Include counterbalanicing of condition order
 
     % Major Steps:
         % Write Instructions
@@ -18,7 +19,6 @@
         % Review timing of different trial types (random values used so far)
         % Add gamification?
         % Add block label to the experiment?
-        % Record also JND Task EEG?
 
 % Requires the custom functions  PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m
 
@@ -267,14 +267,6 @@ scr.ifi = Screen('GetFlipInterval', scr.win);
 [scr.xCenter, scr.yCenter] = RectCenter(scr.windowRect);
 [scr.axisx] = scr.windowRect([1, 3]);
 [scr.axisy] = scr.windowRect([2, 4]);
-
-% Trigger Set-Up
-triggerPortAddress=hex2dec('FFF8'); 
-triggerPort=io64;
-s=io64(triggerPort) % Do not suppress output
-pause(1) % Add a pause so you can inspect the output 
-io64(triggerPort, triggerPortAddress, 0); % Sets the trigger to zero for now
-
 
 %% Timing Parameters
 % Target interval parameters can be found in the trial matrix creation
@@ -564,14 +556,6 @@ startblock=subresults.status.last_block+1;
          % JND Task
          if ~ subresults.status.JND_done
              while JND_task
-
-                 io64(triggerPort, triggerPortAddress, 254); % Start recording
-                 WaitSecs(0.1)
-                 io64(triggerPort, triggerPortAddress, 0);
-                 DrawFormattedText(scr.win,"Loading.", 'center', 'center', scr.fontcolour);
-                 Screen('Flip', scr.win);
-                 pause(3)
-
                  [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
                  % Plot results and flip to screen
                  Screen('Flip', scr.win);
@@ -579,13 +563,8 @@ startblock=subresults.status.last_block+1;
                  plot(1:length(JND_results.Comparison), JND_results.Comparison, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Comparison)]); ylim([min(JND_results.Comparison)-1 max(JND_results.Comparison)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
                  PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
                  Screen('Flip', scr.win);
-                 pause(3)
-                 io64(triggerPort, triggerPortAddress, 255); % Stop recording
-                 WaitSecs(0.1)
-                 io64(triggerPort, triggerPortAddress, 0);
-
                  unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
-                
+
                  % Confirm or repeat
                  adjusttext=sprintf('Comparison Value: %f \n\n Confirm (1) or Repeat (0)?',JND);
                  [response]=respfunction(scr.win,adjusttext,["1","0"]);

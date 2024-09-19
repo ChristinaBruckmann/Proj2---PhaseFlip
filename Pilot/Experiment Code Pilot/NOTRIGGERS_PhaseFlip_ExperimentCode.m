@@ -6,7 +6,7 @@
         % Subresults saves timing as frames, change to seconds
         % Recalculate max-frames
         % Option to adjust gabor intensity after block 1?
-        % Test if practice works
+        % Include COunterbalancing of condition order
 
     % Major Steps:
         % Write Instructions
@@ -18,6 +18,7 @@
         % Review timing of different trial types (random values used so far)
         % Add gamification?
         % Add block label to the experiment?
+        % Record also JND Task EEG?
 
 % Requires the custom functions  PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m
 
@@ -77,6 +78,8 @@ while ~ input_complete
                             f=errordlg("Subject number must be a whole positive integer.");
                             uiwait(f)
                         end
+                    else
+                         error('Terminated by user.')
                     end
                 end
 
@@ -85,39 +88,47 @@ while ~ input_complete
                 try
                     load(savefilename) % Try to load a file with this name, if it exists ask if this should be used
                     answer = questdlg('Subject already exists. Continue?','Existing Subject', 'Yes','No, change number.','No, change number.');
-                    switch answer
-                        case 'Yes'
-                            % Start where the participant has left off?
-                            restart_text=sprintf('Reloading file.\n\nLast completed block: %i \n\nContinue with block %i?',subresults.status.last_block,subresults.status.last_block+1);
-                            answer = questdlg(restart_text,'Existing Subject', 'Yes','No - restart.','Yes');
-                            switch answer
-                                case 'Yes'
-                                    % Mark the reload
-                                    reload_data=1;
-                                    sub_num_compl=1;
-                                case 'No - restart.'
-                                    old_subresults=subresults; % save previous results in file under new name
-                                    subresults=[]; % restart with clean subresults
-                                    subresults.old_subresults=old_subresults;
-                                    save(savefilename,"subresults")
-                                    f=msgbox(sprintf("Previous results saved.\n\nNew file created."));
-                                    uiwait(f)
-                                    sub_num_compl=1;
-                            end
-                        case 'No, change number.'
-                            continue % Re-enter subject number
-                    end
+                        switch answer
+                            case 'Yes'
+                                % Start where the participant has left off?
+                                restart_text=sprintf('Reloading file.\n\nLast completed block: %i \n\nContinue with block %i?',subresults.status.last_block,subresults.status.last_block+1);
+                                answer = questdlg(restart_text,'Existing Subject', 'Yes','No - restart.','Yes');
+                                if ~isempty(answer)
+                                    switch answer
+                                        case 'Yes'
+                                            % Mark the reload
+                                            reload_data=1;
+                                            sub_num_compl=1;
+                                        case 'No - restart.'
+                                            old_subresults=subresults; % save previous results in file under new name
+                                            subresults=[]; % restart with clean subresults
+                                            subresults.old_subresults=old_subresults;
+                                            save(savefilename,"subresults")
+                                            f=msgbox(sprintf("Previous results saved.\n\nNew file created."));
+                                            uiwait(f)
+                                            sub_num_compl=1;
+                                    end
+                                else
+                                    error('Terminated by user.')
+                                end
+                            case 'No, change number.'
+                                continue % Re-enter subject number
+                        end
                 catch ME
                     answer = questdlg('New subject. Create a new file?','New Subject', 'Yes','Return','Return');
                     % Handle response
-                    switch answer
-                        case 'Yes'
-                            save(savefilename,"subresults");
-                            f=msgbox("New file created.");
-                            uiwait(f)
-                            sub_num_compl=1;
-                        case 'Return'
-                            continue % Re-enter subject number
+                    if ~ isempty(answer)
+                        switch answer
+                            case 'Yes'
+                                save(savefilename,"subresults");
+                                f=msgbox("New file created.");
+                                uiwait(f)
+                                sub_num_compl=1;
+                            case 'Return'
+                                continue % Re-enter subject number
+                        end
+                    else
+                        error('Terminated by user.')
                     end
                 end
             end
@@ -127,7 +138,7 @@ while ~ input_complete
             while true
                 answer = inputdlg('Experimenter Name:');
                 if isempty(answer)  % User closed the dialog without entering anything
-                    continue;       % Reopen the dialog
+                    error('Terminated by user.')
                 elseif ~isempty(strtrim(answer{1}))  % Check if input is non-empty and not just spaces
                     subresults.experimenter = string(answer);  % Valid input, exit the loop
                     break;
@@ -196,35 +207,6 @@ while ~ input_complete
             input_complete=1;
     end
 end
-%% PTB Set-Up
-% 
-% % Setup PTB
-% PsychDefaultSetup(2);
-% Priority(1);
-% Screen('Preference', 'SkipSyncTests', SkipSync);
-% scr.number = max(Screen('Screens'));
-% 
-% % Screen Values
-% white = WhiteIndex(scr.number);
-% scr.black = BlackIndex(scr.number);
-% scr.grey = white / 2;
-% scr.background=scr.grey;
-% scr.fontcolour=scr.black;
-% 
-% % Open Screen (with or without floating window)
-% if ~floatwin
-% [scr.win, scr.windowRect] = PsychImaging('OpenWindow', scr.number, scr.background, [], 32, 2,...
-%     [], [],  kPsychNeed32BPCFloat);
-% else
-%     [scr.win, scr.windowRect] = PsychImaging('OpenWindow', scr.number, scr.background,...
-%     [100 100 1600 1600], [], [], [], [], [], kPsychGUIWindow);
-% end
-% scr.ifi = Screen('GetFlipInterval', scr.win);
-% 
-% % Define Screen Dimensions
-% [scr.xCenter, scr.yCenter] = RectCenter(scr.windowRect);
-% [scr.axisx]=scr.windowRect([1,3]);
-% [scr.axisy]=scr.windowRect([2,4]);
 
 %% PTB Set-Up
 
@@ -266,6 +248,14 @@ scr.ifi = Screen('GetFlipInterval', scr.win);
 [scr.xCenter, scr.yCenter] = RectCenter(scr.windowRect);
 [scr.axisx] = scr.windowRect([1, 3]);
 [scr.axisy] = scr.windowRect([2, 4]);
+
+% % Trigger Set-Up
+% triggerPortAddress=hex2dec('FFF8'); 
+% triggerPort=io64;
+% s=io64(triggerPort) % Do not suppress output
+% pause(1) % Add a pause so you can inspect the output 
+% io64(triggerPort, triggerPortAddress, 0); % Sets the trigger to zero for now
+
 
 %% Timing Parameters
 % Target interval parameters can be found in the trial matrix creation
@@ -405,6 +395,16 @@ if ~reload_data % only create new matrix if there is no previous one
     end
     subresults.trialmatrix=trialmatrix;
 end
+
+%% Trigger Vector
+% stim.triggervector=table();
+% 
+% stim.triggervector(1,:)={100,101,110,111,112,113,114,120,121,122,130,131,140,141,142,143};
+% stim.triggervector(2,:)={200,201,210,211,212,213,214,220,221,222,230,231,240,241,242,243};
+% stim.triggervector(3,:)={1};% Set all to one for scope test
+% 
+% stim.triggervector.Properties.VariableNames={'BlockStart','MaskOnset','CueOnsetRegular','CueOnsetIrregular','CueOnsetCatch','CueOnsetShort','CueOnsetLong','TargetOnsetLeft',...
+%     'TargetOnsetRight','TargetOnsetCatch','MaskOffset','QuestionOnset','ResponseLeftCorrect', 'ResponseLeftIncorrect','ResponseRightCorrect','ResponseRightIncorrect'};
 %% Create Stimuli
 
 maxframesnoise=time.ITI+time.ITI+time.preq; % How many frames are needed per trial
@@ -486,61 +486,11 @@ subresults.textinfo=text;
 save(savefilename, "subresults")
 
 startblock=subresults.status.last_block+1;
-%% Oscilloscope Test
- if scr.scope
-     scopedone=0;
-     
-     while  ~scopedone
-     DrawFormattedText(scr.win,'Oscilloscope Test. \n\n Press any button to select timing.', 'center', 'center', scr.fontcolour);
-     Screen('Flip', scr.win);
-     KbStrokeWait;
-
-     % Select interval duration
-     adjusting=1;
-     scope_dur=0.8;
-
-     while adjusting
-         adjustingtext=sprintf('Which interval do you want to test? \n\n\n Interval: %.2f seconds \n\n\n \n\n\nUp-Down with arrows. Confirm with enter. Exit with e.',scope_dur);
-         DrawFormattedText(scr.win,adjustingtext, 'center', 'center', scr.fontcolour);
-         Screen('Flip', scr.win);
-
-         [keyDown, ~, keyName] = KbCheck;
-         if keyDown
-             if strcmp(KbName(keyName), 'UpArrow')==1
-                 scope_dur=scope_dur+0.01;
-                 pause(0.05)
-             elseif strcmp(KbName(keyName), 'DownArrow')==1
-                 scope_dur=scope_dur-0.01;
-                 pause(0.05)
-             elseif strcmp(KbName(keyName), 'Return')==1 % confirm with enter
-                 newvalue=scope_dur;
-                 adjusting=0;
-             elseif strcmp(KbName(keyName),'e')==1 % exit with e
-                 ListenChar(0); % Restore default input handling
-                 scopedone=1;
-                 sca
-                 return
-             end
-
-             if scope_dur<0.02 % cannot go below 0.02 seconds
-                 scope_dur=0.02;
-             elseif scope_dur>4 % or above 4 seconds
-                 scope_dur=4;
-             end
-         end
-     end
-
-     % Run trial function
-     trialfunction(scr,time,text,stim,gaborpercent,[99,scope_dur],0); % Run trial
-
-     end
- end
  %% Run Experiment
  if ~scr.scope
      try
 
-         % Suppress key presses in command window
-         ListenChar(2);
+         ListenChar(2); % Suppress key presses in command window
 
          % Introduction
          if ~reload_data
@@ -555,6 +505,13 @@ startblock=subresults.status.last_block+1;
          % JND Task
          if ~ subresults.status.JND_done
              while JND_task
+%                  io64(triggerPort, triggerPortAddress, 254); % Start recording
+%                  WaitSecs(0.1)
+%                  io64(triggerPort, triggerPortAddress, 0);
+                 DrawFormattedText(scr.win,"Loading.", 'center', 'center', scr.fontcolour);
+                 Screen('Flip', scr.win);
+                 pause(3)
+
                  [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
                  % Plot results and flip to screen
                  Screen('Flip', scr.win);
@@ -562,8 +519,13 @@ startblock=subresults.status.last_block+1;
                  plot(1:length(JND_results.Comparison), JND_results.Comparison, '-o', 'LineWidth', 2); xlim([1 length(JND_results.Comparison)]); ylim([min(JND_results.Comparison)-1 max(JND_results.Comparison)+1]); title('JND Results'); xlabel('Trial Number'); ylabel('Comparison Duration'); yline(JND) % plot data
                  PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
                  Screen('Flip', scr.win);
-                 unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
+                 pause(3)
+%                  io64(triggerPort, triggerPortAddress, 255); % Stop recording
+%                  WaitSecs(0.1)
+%                  io64(triggerPort, triggerPortAddress, 0);
 
+                 unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
+                
                  % Confirm or repeat
                  adjusttext=sprintf('Comparison Value: %f \n\n Confirm (1) or Repeat (0)?',JND);
                  [response]=respfunction(scr.win,adjusttext,["1","0"]);
@@ -714,8 +676,20 @@ startblock=subresults.status.last_block+1;
              Screen('Flip', scr.win);
              KbStrokeWait;
 
+%              io64(triggerPort, triggerPortAddress, 254); % Start recording
+%              WaitSecs(0.1)
+%              io64(triggerPort, triggerPortAddress, 0);
+             DrawFormattedText(scr.win,"Loading.", 'center', 'center', scr.fontcolour);
+             Screen('Flip', scr.win);
+             pause(3)
+
              % Determine current condition
              currcond=cond(b);
+
+%              % Block Onset Trigger
+%              io64(triggerPort, triggerPortAddress,stim.triggervector{cond(b),'BlockStart'});
+%              WaitSecs(0.1)
+%              io64(triggerPort, triggerPortAddress, 0);
 
              % Run Trials
              for t=1:ntrials
@@ -742,11 +716,18 @@ startblock=subresults.status.last_block+1;
              save(savefilename,"subresults");
 
              % Calculate block performance
-            blockperf=resulttable{find(resulttable{:,'Block'}==b),'Correct/Incorrect'}; % performance results for latest block
+            blockperf=resulttable{resulttable{:,'Block'}==b,'Correct/Incorrect'}; % performance results for latest block
             blockaccuracy=mean(blockperf,'omitnan'); % mean accuracy
             totalperf=resulttable{:,'Correct/Incorrect'};
             totalaccuracy= mean(totalperf,'omitnan'); % total accuracy of all trials SO FAR
             accuracy=[blockaccuracy totalaccuracy];
+
+             DrawFormattedText(scr.win,"Loading.", 'center', 'center', scr.fontcolour);
+             Screen('Flip', scr.win);
+             pause(3)
+%              io64(triggerPort, triggerPortAddress, 255); % Stop recording
+%              WaitSecs(0.1)
+%              io64(triggerPort, triggerPortAddress, 0);
 
              % End of block/experiment message
              if b==nblocks
@@ -795,13 +776,61 @@ startblock=subresults.status.last_block+1;
          ShowCursor;
          psychrethrow(psychlasterror);
      end
+ else
+          scopedone=0;
+     
+     while  ~scopedone
+     DrawFormattedText(scr.win,'Oscilloscope Test. \n\n Press any button to select timing.', 'center', 'center', scr.fontcolour);
+     Screen('Flip', scr.win);
+     KbStrokeWait;
+
+     % Select interval duration
+     adjusting=1;
+     scope_dur=0.8;
+
+     while adjusting
+         adjustingtext=sprintf('Which interval do you want to test? \n\n\n Interval: %.2f seconds \n\n\n \n\n\nUp-Down with arrows. Confirm with enter. Exit with e.',scope_dur);
+         DrawFormattedText(scr.win,adjustingtext, 'center', 'center', scr.fontcolour);
+         Screen('Flip', scr.win);
+
+         [keyDown, ~, keyName] = KbCheck;
+         if keyDown
+             if strcmp(KbName(keyName), 'UpArrow')==1
+                 scope_dur=scope_dur+0.01;
+                 pause(0.05)
+             elseif strcmp(KbName(keyName), 'DownArrow')==1
+                 scope_dur=scope_dur-0.01;
+                 pause(0.05)
+             elseif strcmp(KbName(keyName), 'Return')==1 % confirm with enter
+                 newvalue=scope_dur;
+                 adjusting=0;
+             elseif strcmp(KbName(keyName),'e')==1 % exit with e
+                 ListenChar(0); % Restore default input handling
+                 scopedone=1;
+                 sca
+                 return
+             end
+
+             if scope_dur<0.02 % cannot go below 0.02 seconds
+                 scope_dur=0.02;
+             elseif scope_dur>4 % or above 4 seconds
+                 scope_dur=4;
+             end
+         end
+     end
+
+     % Run trial function
+     trialfunction(scr,time,text,stim,gaborpercent,[99,scope_dur],0); % Run trial
+
+     end
  end
 %% Trial Function
 function [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,gaborpercentin,trialinfoin,speed)
 % trialinfoin is the input for the trial information(type of trial and target interval duration from the trial matrix)
 % Choose Inter stimulus interval based on trialinfo input and convert to frames
 % speedrun automatically chooses a response so no manual response is needed (for code testing)
-time.ISI=round(trialinfoin(2)/scr.ifi);
+
+time.ISI=round(trialinfoin(2)/scr.ifi); % convert current target interval to frames
 
 if trialinfoin(1)==5 % if current trial is a catch trial, make gabor invisible and assign random timing (since presentation time does not matter (but has to be significantly longer than 800ms to not smear in analysis)
     gaborpercentin=0;
@@ -851,17 +880,87 @@ else % in theory based on trial matrix, but not yet implemented
     end
 end
 
+% % Choose correct triggers for condition, trial type and orientation trvec=[CueOnset,TargetOnset]
+%     if scr.scopetest
+%         trvec=1;
+%     else
+%         % Which condition
+%         switch trialinfoin(3) 
+%             case 1
+%                 % Which Trial Type
+%                 switch trialinfoin(1)
+%                     case 1
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetRegular'}];
+%                     case 2
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetIrregular'}];
+%                     case 3
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetLong'}];
+%                     case 4
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetShort'}];
+%                     case 5
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetCatch'}];
+%                 end
+%                 
+%                 % Which target orientation
+%                 if trialinfoin(1)==5 % if catch trial
+%                     trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetCatch'}];
+%                 else % if not catch trial assign target orientation
+%                     switch targetorient
+%                         case 1
+%                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetLeft'}];
+%                         case 2
+%                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetRight'}];
+%                     end
+%                 end
+%             case 2
+%                 % Which Trial Type
+%                 switch trialinfoin(1)
+%                     case 1
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetRegular'}];
+%                     case 2
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetIrregular'}];
+%                     case 3
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetLong'}];
+%                     case 4
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetShort'}];
+%                     case 5
+%                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetCatch'}];
+%                 end
+%                 
+%                 % Which target orientation
+%                 if trialinfoin(1)==5 % if catch trial
+%                     trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetCatch'}];
+%                 else % if not catch trial assign target orientation
+%                     switch targetorient
+%                         case 1
+%                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetLeft'}];
+%                         case 2
+%                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetRight'}];
+%                     end
+%                 end
+%         end
+%     end
+
 % Start Trial
 for fixidx=1:time.ITI
     Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
-    %Screen('DrawLines', scr.win, stim.fixCoords,stim.lineWidthPix, scr.black, [scr.xCenter scr.yCenter], 2);
     Screen('Flip', scr.win);
+%     if fixidx==1
+%         io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'MaskOnset'});
+%     elseif fixidx==2
+%         io64(triggerPort, triggerPortAddress, 0);
+%     end
     cnoise=cnoise+1;
 end
 
 for cueidx=1:time.cuedur
     Screen('DrawTexture', scr.win, cuetex(ccue), [], [], 0);
     Screen('Flip', scr.win);
+%     if cueidx==1
+%         io64(triggerPort, triggerPortAddress,trvec(1)); % cue trigger
+%     elseif cueidx==2
+%         io64(triggerPort, triggerPortAddress, 0);
+%     end
     ccue=ccue+1;
 end
 
@@ -873,23 +972,35 @@ end
 
 for taridx=1:time.tardur
     Screen('DrawTexture', scr.win,  tartex(taridx), [], [], 0);
+%     if taridx==1 % target trigger
+%         io64(triggerPort, triggerPortAddress,trvec(2));
+%     elseif taridx==2
+%         io64(triggerPort, triggerPortAddress, 0);
+%     end
     Screen('Flip', scr.win);
 end
 
-for cueidx=1:time.preq
+for noiseidx=1:time.preq
     Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
     Screen('Flip', scr.win);
     cnoise=cnoise+1;
 end
+
+% io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'MaskOffset'}); % Mask offset trigger
+% pause(0.1)
+% io64(triggerPort, triggerPortAddress,0);
 
 % Request Orientation Reponse
 startTime=GetSecs;
 responded=0;
 currtime=0;
 warning=0;
-if ~speed && ~scr.scope % if not in speed run mode or scope test, ask question as normal, otherwise automatically choose answer and continue
+if ~trialinfoin(1)==5 && ~speed && ~scr.scope % if not catch trial, in speed run mode or scope test, ask question as normal, otherwise automatically choose answer and continue
     while ~responded
         DrawFormattedText(scr.win, 'Left or right?', 'center', 'center', scr.fontcolour);
+%         io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'QuestionOnset'});
+%         pause(0.1)
+%         io64(triggerPort, triggerPortAddress,0);
         if (currtime-startTime) > time.maxresptime % if participant hasn't responded after max time, display warning
             DrawFormattedText(scr.win,'Please answer.', 'center', scr.yCenter+250, scr.fontcolour);
             warning=1; % was a time warning displayed during response?
@@ -903,17 +1014,29 @@ if ~speed && ~scr.scope % if not in speed run mode or scope test, ask question a
                 responded=1;
                 if targetorient==1 % left
                     RespEval=1;
+%                     io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseLeftCorrect'});
+%                     pause(0.1)
+%                     io64(triggerPort, triggerPortAddress,0);
                 else
                     RespEval=0;
+%                     io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseLeftIncorrect'});
+%                     pause(0.1)
+%                     io64(triggerPort, triggerPortAddress,0);
                 end
             elseif strcmp(KbName(keyName), text.keyright)==1 % if right key
                 RT=respTime-startTime;
                 responded=1;
                 Resp=0; %Right
                 if targetorient==0 %Right
-                    RespEval=1;
+%                     io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseRightCorrect'});
+%                     pause(0.1)
+%                     io64(triggerPort, triggerPortAddress,0);
+                    RespEval=1; % Evaluation
                 else
-                    RespEval=0;
+%                     io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseRightIncorrect'});
+%                     pause(0.1)
+%                     io64(triggerPort, triggerPortAddress,0);
+                    RespEval=0; % Evaluation
                 end
             elseif strcmp(KbName(keyName),'e')==1
                 DrawFormattedText(scr.win,'Continue (c)? Exit (e)?', 'center', 'center', scr.fontcolour);
@@ -943,6 +1066,11 @@ if ~speed && ~scr.scope % if not in speed run mode or scope test, ask question a
         Screen('Flip', scr.win);
         WaitSecs(1.5)
     end
+elseif trialinfoin(1)==5 % If catch, NaN in all fields
+    RT=NaN;
+    warning=NaN;
+    Resp=NaN;
+    RespEval=NaN;
 else % in speed run assign random RT and random response.
     RT=rand(1);
     warning=0;
