@@ -2,21 +2,15 @@
 % To do:
 
     % Minor Fixes:
-        % jitter duration for noise presentation before and after each trial
-        % Subresults saves timing as frames, change to seconds
         % Recalculate max-frames
         % Option to adjust gabor intensity after block 1?
-        % Include COunterbalancing of condition order
 
     % Major Steps:
         % Write Instructions
-        % EEG Prep Code
         % Test code functionality for the whole experiment
 
     % Discuss with Assaf:
         % Constraints for Matrix Shuffle
-        % Review timing of different trial types (random values used so far)
-        % Add gamification?
         % Add block label to the experiment?
         % Record also JND Task EEG?
 
@@ -26,14 +20,14 @@
 sca;
 close all;
 clear;
-%clear mex;
+% clear mex;
 
 % Initialize Structs
 scr=[]; % Everything related to PTB Screen
 stim=[]; % Stimulus Information
 time=[]; % Timing Information
 
-cd 'C:\Users\cbruckmann\Documents\PhD Projects\Proj2 - PhaseFlip\Pilot\Experiment Code Pilot'
+cd 'C:\Experiments\Christina\PhaseFlip'
 %% Input GUI
 input_complete=0;
 reload_data=0; % default: do not reload
@@ -52,15 +46,17 @@ while ~ input_complete
             %             uiwait(f)
             error('Terminated by user.')
         case 1 % Running a participant
-            floatwin=0; % Take over whole screen (0) or just part of it (1)
+            floatwin=1; % Take over whole screen (0) or just part of it (1)
             SkipSync=1; % Skip Sync Tests (1 when testing on laptop)
             testing=1; % testing the code? reduces amount of trials to a minimum
-            speedrun=1; % automatically chooses a response, no need to manually click anything (used for testing the code)
+            speedrun=0; % automatically chooses a response, no need to manually click anything (used for testing the code)
+            gamification=1; % let participant collect points?
             scr.scope=0; % run scope test?
+            reminders=1; % Show reminder intervals?
 
             % Experiment Sections
             JND_task=0; % JND Task?
-            practice=1; % Practice?
+            practice=0; % Practice?
             staircase=0; % Staircase?
 
             % Input Subject Number
@@ -150,9 +146,11 @@ while ~ input_complete
             % Jumps directly to the real experiment to test a trial, this skips JND, Staircase and Practice
             floatwin=0; 
             SkipSync=0; 
-            testing=0;
+            testing=1;
             speedrun=0;
             scr.scope=0;
+            gamification=0; 
+           reminders=0; % Show reminder intervals?
 
             % Experiment Sections
             JND_task=0; 
@@ -164,15 +162,17 @@ while ~ input_complete
         case 3 % Oscilloscope Test
             floatwin=0; 
             SkipSync=0; 
-            testing=0;
+            testing=1;
             speedrun=0; 
             scr.scope=1;
+            gamification=0; 
+            reminders=0; % Show reminder intervals?
 
             input_complete=1;
         case 4 % Debugging
             % Choose which debugging options you want
             prompt = 'Select debugging options:';
-            options = {'Reduced_TrialN', 'Speedrun', 'JNDTask','Staircase','Practice','SkipSync','Floating_Window'};
+            options = {'Reduced_TrialN', 'Speedrun', 'JNDTask','Staircase','Practice','SkipSync','Floating_Window','Gamification','ReminderIntervals'};
 
             % Display list dialog and get selected indices
             [selectedIndices, ~] = listdlg('PromptString', prompt, ...
@@ -201,7 +201,9 @@ while ~ input_complete
             practice = varStruct.(options{5});
             SkipSync=varStruct.(options{6});
             floatwin=varStruct.(options{7});
-            
+            gamification=varStruct.(options{8});
+            reminders=varStruct.(options{9});
+
             savefilename=sprintf('test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
             scr.scope=0;
             input_complete=1;
@@ -220,8 +222,13 @@ scr.number = max(Screen('Screens'));
 white = WhiteIndex(scr.number);
 scr.black = BlackIndex(scr.number);
 scr.grey = white / 2;
-scr.background = scr.grey;
-scr.fontcolour = scr.black;
+if ~scr.scope
+    scr.background = scr.grey;
+    scr.fontcolour = scr.black;
+else
+    scr.background = scr.black;
+    scr.fontcolour = white;
+end
 
 % Get screen size of main display
 [scr.screenXpixels, scr.screenYpixels] = Screen('WindowSize', scr.number);
@@ -250,28 +257,32 @@ scr.ifi = Screen('GetFlipInterval', scr.win);
 [scr.axisy] = scr.windowRect([2, 4]);
 
 % Trigger Set-Up
-triggerPortAddress=hex2dec('FFF8'); 
-triggerPort=io64;
-s=io64(triggerPort) % Do not suppress output
+scr.triggerPortAddress=hex2dec('FFF8'); 
+scr.triggerPort=io64;
+s=io64(scr.triggerPort) % Do not suppress output
 pause(1) % Add a pause so you can inspect the output 
-io64(triggerPort, triggerPortAddress, 0); % Sets the trigger to zero for now
+io64(scr.triggerPort, scr.triggerPortAddress, 0); % Sets the trigger to zero for now
 
 
 %% Timing Parameters
-% Target interval parameters can be found in the trial matrix creation
 
-time.ITI=1; % Inter-Trial Interval
-time.preq=0.5; % Pre-Question Interval
+time.ITI=[1.85:0.1:2.15]; % Inter-Trial Interval
+time.initmask=[0.75:0.1:1.25];% Initial Mask pre-WS
+time.preq=[0.4:0.05:0.6]; % Mask Duration post target and pre-question
 time.cuedur=0.1; % Cue Duration
 time.tardur=0.016; % Target Duration
-time.practiceinterval=0.7; % how long is the interval during practice?
+time.practiceinterval=0.7; % how long is the interval during practice? (not converted into frames here, happens in trial function)
      
 % Target times for each block type / condition
 time.trialtimes1=[0.7, 0.75, 1.2, 0.5, NaN]; %[timereg timeirr timelong timeshort timecatch];
 time.trialtimes2=[0.75, 0.7, 1.25, 0.55, NaN]; %[timereg timeirr timelong timeshort timecatch];
 
+% Save the timing as seconds before converting into frames
+subresults.timeinsec=time;
+
 % Convert into frames
 time.ITI=round(time.ITI/scr.ifi); % Inter-Trial Interval
+time.initmask=round(time.initmask/scr.ifi); % Initial Mask pre-WS
 time.preq=round(time.preq/scr.ifi); % Pre-Question Interval
 time.cuedur=round(time.cuedur/scr.ifi); % Cue Duration
 time.tardur=round(time.tardur/scr.ifi); % Target Duration
@@ -345,16 +356,20 @@ if testing % shorter version to test the code
     ncatchtrials=1;
 else % experiment settings
     % Blocks, Trials etc.
-    cond=[1 2 1 2 1 2 1 2]; % conditions (1=800ms, 2=850ms)
+    if sub_num_compl % counterbalance
+        cond=[1 2 1 2 1 2 1 2]; % conditions (1=800ms, 2=850ms)
+    else
+        cond=[2 1 2 1 2 1 2 1]; % conditions (1=800ms, 2=850ms)
+    end
     nblocks=length(cond); % total blocks
     ntrials=50; % trials per block
     ntrialstot=nblocks*ntrials;
 
     % Split per block
-    nregular=35;
-    nirregular=3;
-    nlong=1;
-    nshort=1;
+    nregular=25;
+    nirregular=0;
+    nlong=4;
+    nshort=4;
 
     % Left overs are assigned to catch trials (throw error if none are left)
     if (ntrials-nregular-nirregular-nlong-nshort)>49
@@ -399,21 +414,21 @@ end
 %% Trigger Vector
 stim.triggervector=table();
 
-stim.triggervector(1,:)={100,101,110,111,112,113,114,120,121,122,130,131,140,141,142,143};
-stim.triggervector(2,:)={200,201,210,211,212,213,214,220,221,222,230,231,240,241,242,243};
+stim.triggervector(1,:)={100,101,110,111,112,113,114,120,121,122,130,131,140,141,142,143,150,151,152};
+stim.triggervector(2,:)={200,201,210,211,212,213,214,220,221,222,230,231,240,241,242,243,250,251,252};
 stim.triggervector(3,:)={1};% Set all to one for scope test
 
 stim.triggervector.Properties.VariableNames={'BlockStart','MaskOnset','CueOnsetRegular','CueOnsetIrregular','CueOnsetCatch','CueOnsetShort','CueOnsetLong','TargetOnsetLeft',...
-    'TargetOnsetRight','TargetOnsetCatch','MaskOffset','QuestionOnset','ResponseLeftCorrect', 'ResponseLeftIncorrect','ResponseRightCorrect','ResponseRightIncorrect'};
+    'TargetOnsetRight','TargetOnsetCatch','MaskOffset','QuestionOnset','ResponseLeftCorrect', 'ResponseLeftIncorrect','ResponseRightCorrect','ResponseRightIncorrect','Reminder Interval Mask Onset','Reminder Interval Cue 1','Reminder Interval Cue 2'};
 %% Create Stimuli
 
-maxframesnoise=time.ITI+time.ITI+time.preq; % How many frames are needed per trial
+maxframesnoise=max(time.ITI)+max(time.ITI)+max(time.preq); % How many frames are needed per trial
 maxframescue=time.cuedur;
 DrawFormattedText(scr.win, 'Loading. Please wait.', 'center', 'center', scr.fontcolour);
 Screen('Flip', scr.win);
 
 %  Noise Mask
-for fridx=1:maxframesnoise*4 % make 4 times the amount of frames just to be sure and also for JND task more are needed.
+for fridx=1:maxframesnoise*4 % make 4 times the amount of frames just to be sure and also for JND task more are needed. FIX THIS!!!!
     if scr.scope % If oscillosope test, make mask as dark as possible
         stim.noiseimg=0.01+stim.maskintensity*(rand(stim.rectSize)-0.5);
         stim.noiseimg = min(max(stim.noiseimg, 0), 1); % confirm values are between 0 and 1
@@ -463,30 +478,27 @@ gaussEnvt = exp(-1.*(x.^2+y.^2)./sigma.^2); % create gaussian envelope (target)
 gaussEnvt(gaussEnvt<0.01)=0; % change close-to-zero peripheral elements to zero
 stim.gaborRight=imRright.*gaussEnvt;
 stim.gaborLeft=imRleft.*gaussEnvt;
-% Embedding it in mask happens lower after the intensity has been chosen
+% Embedding it in mask happens lower in the script after the intensity has been chosen
 
-
-% %% Oscilloscope Test
-% DrawFormattedText(scr.win, 'Welcome to the Oscilloscope Testing Environment \n\n Press any button to continue.', 'center', 'center', scr.fontcolour);
-% Screen('Flip', scr.win);
-% responsetext=sprintf("Which condition would you like to test? \n\n\n 1) %i seconds \n\n 2) %i seconds ",)
-% [response,resp_eval]=respfunction(scr.win,responsetext,responsebuttons,responsemapping,graceful_abort,fontcolour)
 %% Save all parameters and other info
-if ~reload_data % if no previous data is being loaded, set progress to zero
-    subresults.status.JND_done=0;
-    subresults.status.practice_done=0;
-    subresults.status.staircase_done=0;
-    subresults.status.last_block=0;
-    %subresults.status.last_trial=0;
-elseif reload_data && subresults.status.last_block>0
-    resulttable=subresults.data; % reload previous results data into table
-end
-subresults.screeninfo=scr;
-subresults.textinfo=text;
-save(savefilename, "subresults")
+if ~scr.scope
+    if reload_data && subresults.status.last_block>0 % reload previous data
+        resulttable=subresults.data; % otherwise initialize
+    else
+        subresults.status.JND_done=0;
+        subresults.status.practice_done=0;
+        subresults.status.staircase_done=0;
+        subresults.status.last_block=0;
+        subresults.status.total_points=0;
+    end
 
-startblock=subresults.status.last_block+1;
- %% Run Experiment
+    subresults.screeninfo=scr;
+    subresults.textinfo=text;
+    save(savefilename, "subresults")
+
+    startblock=subresults.status.last_block+1;
+end
+%% Run Experiment
  if ~scr.scope
      try
 
@@ -498,18 +510,18 @@ startblock=subresults.status.last_block+1;
          else
              starttext='Welcome back. \n\n  Press any button to continue.';
          end
+
          DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
          Screen('Flip', scr.win);
          KbStrokeWait;
 
-         % JND Task
+         %% Run JND Task
          if ~ subresults.status.JND_done
              while JND_task
-
-                 io64(triggerPort, triggerPortAddress, 254); % Start recording
+                 io64(scr.triggerPort, scr.triggerPortAddress, 254); % Start recording
                  WaitSecs(0.1)
-                 io64(triggerPort, triggerPortAddress, 0);
-                 DrawFormattedText(scr.win,"Loading.", 'center', 'center', scr.fontcolour);
+                 io64(scr.triggerPort, scr.triggerPortAddress, 0);
+                 DrawFormattedText(scr.win,'Loading.', 'center', 'center', scr.fontcolour);
                  Screen('Flip', scr.win);
                  pause(3)
 
@@ -521,9 +533,9 @@ startblock=subresults.status.last_block+1;
                  PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
                  Screen('Flip', scr.win);
                  pause(3)
-                 io64(triggerPort, triggerPortAddress, 255); % Stop recording
+                 io64(scr.triggerPort, scr.triggerPortAddress, 255); % Stop recording
                  WaitSecs(0.1)
-                 io64(triggerPort, triggerPortAddress, 0);
+                 io64(scr.triggerPort, scr.triggerPortAddress, 0);
 
                  unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
                 
@@ -556,7 +568,7 @@ startblock=subresults.status.last_block+1;
              end
          end
 
-         % Practice
+         %% Run Practice
          if practice
              easypractice=1;
          end
@@ -633,7 +645,7 @@ startblock=subresults.status.last_block+1;
 
          end
 
-         % Staircase
+         %% Run Staircase
          if staircase && ~subresults.status.staircase_done
              navipage(scr.win,text.staircase_instructions) % Show instructions
              [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent);
@@ -663,12 +675,14 @@ startblock=subresults.status.last_block+1;
          Screen('Flip', scr.win);
          KbStrokeWait;
 
-         % Run Blocks
+         %% Run Blocks
          if reload_data
              tottrialcount=subresults.status.last_block*ntrials+1; % start at first trial of next block
-             navipage(scr.win,text.block1_instructions) % Show instructions for first block
          else
              tottrialcount=1; % total trial counter
+ 
+             subresults.status.total_points=0;
+             navipage(scr.win,text.block1_instructions) % Show instructions for first block
          end
 
          for b=startblock:nblocks
@@ -677,35 +691,63 @@ startblock=subresults.status.last_block+1;
              Screen('Flip', scr.win);
              KbStrokeWait;
 
-             io64(triggerPort, triggerPortAddress, 254); % Start recording
-             WaitSecs(0.1)
-             io64(triggerPort, triggerPortAddress, 0);
-             DrawFormattedText(scr.win,"Loading.", 'center', 'center', scr.fontcolour);
+              io64(scr.triggerPort, scr.triggerPortAddress, 254); % Start recording
+              WaitSecs(0.1)
+              io64(scr.triggerPort, scr.triggerPortAddress, 0);
+             DrawFormattedText(scr.win,'Loading.', 'center', 'center', scr.fontcolour);
              Screen('Flip', scr.win);
              pause(3)
 
              % Determine current condition
              currcond=cond(b);
 
-             % Block Onset Trigger
-             io64(triggerPort, triggerPortAddress,stim.triggervector{cond(b),'BlockStart'});
-             WaitSecs(0.1)
-             io64(triggerPort, triggerPortAddress, 0);
+             % Initialize gamification block points
+             block_points=0;
+
+              % Block Onset Trigger
+              io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{cond(b),'BlockStart'});
+              WaitSecs(0.1)
+              io64(scr.triggerPort, scr.triggerPortAddress, 0);
 
              % Run Trials
              for t=1:ntrials
+
                  trialinfo=subresults.trialmatrix(tottrialcount,:); % Choose trialinfo from trialmatrix
 
                  [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,gaborpercent,trialinfo,speedrun); % Run trial
 
-                 if ~isnan(Resp)% Save trial results
+                 if Resp~=9% If trial was not interruped, save and proceed as normal
                      resulttable(tottrialcount,:)=table(currcond, b, t, trialinfo(1), trialinfo(2),RT, Resp, RespEval, warning, gaborpercent,stim.maskintensity, 'VariableNames',{'Condition','Block', ...
                          'Trial','Trial Type','Target Interval','Reaction Time', 'Orientation Reseponse', 'Correct/Incorrect', 'Late Warning', 'Gabor Strength','Mask Intensity'});
                      subresults.data=resulttable;
                      tottrialcount=tottrialcount+1; % update total trial counter
                      %subresults.status.last_trial=tottrialcount; % save status
                      save(savefilename,"subresults");
-                 else % repeat the trial and do not save output
+
+                     % Gamification Update
+                     if gamification && RespEval==1 % If correct, update points
+                         subresults.status.total_points=subresults.status.total_points+1;
+                         block_points=block_points+1;
+                         DrawFormattedText(scr.win,'Correct! \n\n +1 Point', 'center', 'center', scr.fontcolour);
+                         Screen('Flip', scr.win);
+                         pause(0.5)
+                     elseif gamification && RespEval==0
+                         DrawFormattedText(scr.win,'Incorrect.', 'center', 'center', scr.fontcolour);
+                         Screen('Flip', scr.win);
+                         pause(0.5)
+                     elseif gamification
+                         DrawFormattedText(scr.win,'No target.', 'center', 'center', scr.fontcolour);
+                         Screen('Flip', scr.win);
+                         pause(0.5)
+                     end
+
+                     if reminders % If reminders are activated
+                         if ~mod(t,4) % Show reminder interval every nth trial
+                             timing_reminder(scr, time, stim,trialinfo)
+                         end
+                     end
+
+                 else % If trial was interrupted, repeat the trial and do not save output
                      DrawFormattedText(scr.win,'Press any button to continue the task.', 'center', 'center', scr.fontcolour);
                      Screen('Flip', scr.win);
                      KbStrokeWait;
@@ -717,21 +759,26 @@ startblock=subresults.status.last_block+1;
              save(savefilename,"subresults");
 
              % Calculate block performance
-            blockperf=resulttable{resulttable{:,'Block'}==b,'Correct/Incorrect'}; % performance results for latest block
-            blockaccuracy=mean(blockperf,'omitnan'); % mean accuracy
-            totalperf=resulttable{:,'Correct/Incorrect'};
-            totalaccuracy= mean(totalperf,'omitnan'); % total accuracy of all trials SO FAR
-            accuracy=[blockaccuracy totalaccuracy];
+             blockperf=resulttable{resulttable{:,'Block'}==b,'Correct/Incorrect'}; % performance results for latest block
+             blockaccuracy=mean(blockperf,'omitnan'); % mean accuracy
+             totalperf=resulttable{:,'Correct/Incorrect'};
+             totalaccuracy= mean(totalperf,'omitnan'); % total accuracy of all trials SO FAR
+             accuracy=[blockaccuracy totalaccuracy];
 
-             DrawFormattedText(scr.win,"Loading.", 'center', 'center', scr.fontcolour);
+             DrawFormattedText(scr.win,'Loading.', 'center', 'center', scr.fontcolour);
              Screen('Flip', scr.win);
              pause(3)
-             io64(triggerPort, triggerPortAddress, 255); % Stop recording
-             WaitSecs(0.1)
-             io64(triggerPort, triggerPortAddress, 0);
+              io64(scr.triggerPort, scr.triggerPortAddress, 255); % Stop recording
+              WaitSecs(0.1)
+              io64(scr.triggerPort, scr.triggerPortAddress, 0);
 
              % End of block/experiment message
              if b==nblocks
+                 scoretext=sprintf('End of block %i/%i  \n\n Points in this block: %i \n\n Total score: %i ',b,nblocks,block_points, subresults.status.total_points);
+                 DrawFormattedText(scr.win,scoretext, 'center', 'center', scr.fontcolour);
+                 Screen('Flip', scr.win);
+                 pause(2.5)
+
                  DrawFormattedText(scr.win,'This is the end of the experiment. \n\n Please wait for the experimenter.', 'center', 'center', scr.fontcolour);
                  Screen('Flip', scr.win);
                  unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
@@ -742,7 +789,11 @@ startblock=subresults.status.last_block+1;
              else
                  next_block=0; % continue with next block?
                  while ~next_block
-                     blockendmessage=sprintf('End of block %i/%i \n\nPlease take a break. \n\n \n\nPress the space bar to continue.',b,nblocks);
+                     scoretext=sprintf('End of block %i/%i  \n\n Points in this block: %i \n\n Total score: %i ',b,nblocks,block_points, subresults.status.total_points);
+                     DrawFormattedText(scr.win,scoretext, 'center', 'center', scr.fontcolour);
+                     Screen('Flip', scr.win);
+                     pause(2.5)
+                     blockendmessage=sprintf('Please take a break. \n\n \n\nPress the space bar to continue with the next block.');
                      DrawFormattedText(scr.win,blockendmessage, 'center', 'center', scr.fontcolour);
                      % Print performance
                      performancetext=sprintf('B%.2f24753 /n T%.2f45264', accuracy(1),accuracy(2)); % block and total
@@ -778,6 +829,7 @@ startblock=subresults.status.last_block+1;
          psychrethrow(psychlasterror);
      end
  else
+     %% Scope Test
           scopedone=0;
      
      while  ~scopedone
@@ -821,7 +873,7 @@ startblock=subresults.status.last_block+1;
      end
 
      % Run trial function
-     trialfunction(scr,time,text,stim,gaborpercent,[99,scope_dur],0); % Run trial
+     trialfunction(scr,time,text,stim,gaborpercent,[99,scope_dur,3],0); % Run trial
 
      end
  end
@@ -868,6 +920,11 @@ noisetex=stim.noisetex(randperm(length(stim.noisetex)));
 tartex_l=stim.tartex_l(randperm(length(stim.tartex_l)));
 tartex_r=stim.tartex_r(randperm(length(stim.tartex_r)));
 
+% Randomly choose from jittered timings
+ITI=time.ITI(randi(length(time.ITI)));
+preq=time.preq(randi(length(time.preq)));
+initmask=time.initmask(randi(length(time.initmask)));
+
 % Choose orientation
 if scr.scope % random for scope test
     targetorient=randi(2)-1;
@@ -882,8 +939,8 @@ else % in theory based on trial matrix, but not yet implemented
 end
 
 % Choose correct triggers for condition, trial type and orientation trvec=[CueOnset,TargetOnset]
-    if scr.scopetest
-        trvec=1;
+    if scr.scope
+        trvec=[1 1 1];
     else
         % Which condition
         switch trialinfoin(3) 
@@ -943,65 +1000,85 @@ end
     end
 
 % Start Trial
-for fixidx=1:time.ITI
+
+% Inter Trial Interval
+for fixidx=1:ITI
+    Screen('Flip', scr.win);
+    if fixidx==1
+        io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'MaskOnset'});
+    elseif fixidx==2
+        io64(scr.triggerPort, scr.triggerPortAddress, 0);
+    end
+end
+
+% Mask Onset
+for fixidx=1:initmask
     Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
     Screen('Flip', scr.win);
     if fixidx==1
-        io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'MaskOnset'});
+        io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'MaskOnset'});
     elseif fixidx==2
-        io64(triggerPort, triggerPortAddress, 0);
+        io64(scr.triggerPort, scr.triggerPortAddress, 0);
     end
     cnoise=cnoise+1;
 end
 
-for cueidx=1:time.cuedur
+%Cue Onset
+for cueidx=1:time.cuedur 
     Screen('DrawTexture', scr.win, cuetex(ccue), [], [], 0);
     Screen('Flip', scr.win);
     if cueidx==1
-        io64(triggerPort, triggerPortAddress,trvec(1)); % cue trigger
+        io64(scr.triggerPort, scr.triggerPortAddress,trvec(1)); % cue trigger
     elseif cueidx==2
-        io64(triggerPort, triggerPortAddress, 0);
+        io64(scr.triggerPort, scr.triggerPortAddress, 0);
     end
     ccue=ccue+1;
 end
 
+% Inter Stimulus Interval
 for noiseidx=1:time.ISI
     Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
     Screen('Flip', scr.win);
     cnoise=cnoise+1;
 end
 
+% Target Presentation
 for taridx=1:time.tardur
     Screen('DrawTexture', scr.win,  tartex(taridx), [], [], 0);
-    if taridx==1 % target trigger
-        io64(triggerPort, triggerPortAddress,trvec(2));
-    elseif taridx==2
-        io64(triggerPort, triggerPortAddress, 0);
-    end
     Screen('Flip', scr.win);
+    if taridx==1 % target trigger
+        io64(scr.triggerPort, scr.triggerPortAddress,trvec(2));
+    elseif taridx==2
+        io64(scr.triggerPort, scr.triggerPortAddress, 0);
+    end
 end
 
-for noiseidx=1:time.preq
+% Post Target Mask
+for noiseidx=1:preq
     Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
     Screen('Flip', scr.win);
+    io64(scr.triggerPort, scr.triggerPortAddress, 0);
     cnoise=cnoise+1;
+    if noiseidx==preq
+        io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'MaskOffset'}); % Mask offset trigger
+    end
 end
 
-io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'MaskOffset'}); % Mask offset trigger
-pause(0.1)
-io64(triggerPort, triggerPortAddress,0);
+
+pause(0.01)
+io64(scr.triggerPort, scr.triggerPortAddress,0);
 
 % Request Orientation Reponse
 startTime=GetSecs;
 responded=0;
 currtime=0;
 warning=0;
-if ~trialinfoin(1)==5 && ~speed && ~scr.scope % if not catch trial, in speed run mode or scope test, ask question as normal, otherwise automatically choose answer and continue
+if  (trialinfoin(1)~=5) && ~speed && ~scr.scope % if not catch trial, in speed run mode or scope test, ask question as normal, otherwise automatically choose answer and continue
     while ~responded
         DrawFormattedText(scr.win, 'Left or right?', 'center', 'center', scr.fontcolour);
-        io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'QuestionOnset'});
+        io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'QuestionOnset'});
         pause(0.1)
-        io64(triggerPort, triggerPortAddress,0);
+        io64(scr.triggerPort, scr.triggerPortAddress,0);
         if (currtime-startTime) > time.maxresptime % if participant hasn't responded after max time, display warning
             DrawFormattedText(scr.win,'Please answer.', 'center', scr.yCenter+250, scr.fontcolour);
             warning=1; % was a time warning displayed during response?
@@ -1015,28 +1092,28 @@ if ~trialinfoin(1)==5 && ~speed && ~scr.scope % if not catch trial, in speed run
                 responded=1;
                 if targetorient==1 % left
                     RespEval=1;
-                    io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseLeftCorrect'});
+                    io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseLeftCorrect'});
                     pause(0.1)
-                    io64(triggerPort, triggerPortAddress,0);
+                    io64(scr.triggerPort, scr.triggerPortAddress,0);
                 else
                     RespEval=0;
-                    io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseLeftIncorrect'});
+                    io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseLeftIncorrect'});
                     pause(0.1)
-                    io64(triggerPort, triggerPortAddress,0);
+                    io64(scr.triggerPort, scr.triggerPortAddress,0);
                 end
             elseif strcmp(KbName(keyName), text.keyright)==1 % if right key
                 RT=respTime-startTime;
                 responded=1;
                 Resp=0; %Right
                 if targetorient==0 %Right
-                    io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseRightCorrect'});
+                    io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseRightCorrect'});
                     pause(0.1)
-                    io64(triggerPort, triggerPortAddress,0);
+                    io64(scr.triggerPort, scr.triggerPortAddress,0);
                     RespEval=1; % Evaluation
                 else
-                    io64(triggerPort, triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseRightIncorrect'});
+                    io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'ResponseRightIncorrect'});
                     pause(0.1)
-                    io64(triggerPort, triggerPortAddress,0);
+                    io64(scr.triggerPort, scr.triggerPortAddress,0);
                     RespEval=0; % Evaluation
                 end
             elseif strcmp(KbName(keyName),'e')==1
@@ -1046,11 +1123,11 @@ if ~trialinfoin(1)==5 && ~speed && ~scr.scope % if not catch trial, in speed run
                 if strcmp(KbName(keyNamethr),'e')
                     ListenChar(0); % Restore default input handling
                     sca
-                    return
+                    error("Terminated by user.")
                 elseif strcmp(KbName(keyNamethr),'c')
-                    Resp=NaN; % if trial was paused in between, do not go back to record late answers but continue with next trial instead
+                    Resp=9; % if trial was paused in between, do not go back to record late answers but continue with next trial instead
                     RespEval=0;
-                    RT=NaN;
+                    RT=9;
                     DrawFormattedText(scr.win,'Ready? Press any button.', 'center', 'center', scr.fontcolour);
                     Screen('Flip', scr.win);
                     KbStrokeWait
@@ -1343,4 +1420,89 @@ while ~jndfound
     end
 end
 JND_results.Properties.VariableNames={'Standard','Comparison','Response','Correct','Adjustment'}; % add variable names to results table
+end
+
+%% Timing reminder Function
+% Reminder Intervals at full visibility
+function timing_reminder(scr, time, stim, trialinfoin)
+
+    % Randomly choose from jittered timings
+    ITI=time.ITI(randi(length(time.ITI)));
+    preq=time.preq(randi(length(time.preq)));
+    initmask=time.initmask(randi(length(time.initmask)));
+    time.ISI=round(trialinfoin(2)/scr.ifi); % convert current target interval to frames
+    
+    % Shuffle textures and initialize counters
+    cnoise=1;
+    ccue=1;
+    cuetex=stim.cuetex(randperm(length(stim.cuetex)));
+    noisetex=stim.noisetex(randperm(length(stim.noisetex)));
+
+    % Text
+    DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
+    Screen('Flip', scr.win);
+    pause (1)
+    
+    % Start Trial
+    
+    % Inter Trial Interval
+    for fixidx=1:ITI
+        DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
+        Screen('Flip', scr.win);
+    end
+    
+    % Mask Onset
+    for fixidx=1:initmask
+        DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
+        Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
+        Screen('Flip', scr.win);
+        if fixidx==1
+            io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'Reminder Interval Mask Onset'});
+        elseif fixidx==2
+            io64(scr.triggerPort, scr.triggerPortAddress, 0);
+        end
+        cnoise=cnoise+1;
+    end
+    
+    %Cue Onset
+    for cueidx=1:time.cuedur
+        DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
+        Screen('DrawTexture', scr.win, cuetex(ccue), [], [], 0);
+        Screen('Flip', scr.win);
+        if cueidx==1
+            io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervector{trialinfoin(3),'Reminder Interval Cue 1'}); % cue trigger
+        elseif cueidx==2
+            io64(scr.triggerPort, scr.triggerPortAddress, 0);
+        end
+        ccue=ccue+1;
+    end
+    
+    % Inter Stimulus Interval
+    for noiseidx=1:time.ISI
+        DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
+        Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
+        Screen('Flip', scr.win);
+        cnoise=cnoise+1;
+    end
+    
+    % Target Presentation
+    for taridx=1:time.tardur
+        DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
+        Screen('DrawTexture', scr.win,  cuetex(ccue), [], [], 0);
+        if taridx==1 % target trigger
+            io64(scr.triggerPort, stim.triggervector{trialinfoin(3),'Reminder Interval Cue 2'});
+        elseif taridx==2
+            io64(scr.triggerPort, scr.triggerPortAddress, 0);
+        end
+        Screen('Flip', scr.win);
+    end
+    
+    % Post Target Mask
+    for noiseidx=1:preq
+        DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
+        Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
+        Screen('Flip', scr.win);
+        cnoise=cnoise+1;
+    end
+
 end
