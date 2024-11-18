@@ -966,7 +966,7 @@ end
                     switch targetorient
                         case 1
                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetLeft'}];
-                        case 2
+                        case 0
                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetRight'}];
                     end
                 end
@@ -992,7 +992,7 @@ end
                     switch targetorient
                         case 1
                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetLeft'}];
-                        case 2
+                        case 0
                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetRight'}];
                     end
                 end
