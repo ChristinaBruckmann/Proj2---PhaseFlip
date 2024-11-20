@@ -5,7 +5,7 @@
 % Allows to create instructions with back and forth navigations through button presses
 % If desired also add position input to code
 
-% Input: 
+% Input:
 % screen: PTB screen handle
 % instructions: string arrayformatted instructions, each new page should be a new row in the cell. amount of pages will be determined by row of cell array.
 % optional: String array: buttons (which buttons should mean forward and backward? First is forward, second is backward) Default: arrow left right e.g. ["f","b"]
@@ -64,19 +64,23 @@ while ~final_slide
                 continue
             end
         elseif strcmp(KbName(keyNamethr),buttons(1))==1
-            if ~curr_slide==1
+            if curr_slide>1
             curr_slide=curr_slide-1; % previous page
             end
             resp=1;
-        elseif strcmp(KbName(keyNamethr),buttons(2))==1 
-            curr_slide=curr_slide+1; % next page
+        elseif strcmp(KbName(keyNamethr),buttons(2))==1
+            if curr_slide < length(instructions)
+                curr_slide = curr_slide + 1; % next page
+            elseif curr_slide == length(instructions) % condition to exit
+                final_slide = 1;
+            end
             resp=1;
         end
     end
 
     % Exit after last page
-    if curr_slide>size(instructions)
-        final_slide=1;
-    end
+    %if curr_slide>size(instructions)
+     %   final_slide=1;
+    %end
 end
 end

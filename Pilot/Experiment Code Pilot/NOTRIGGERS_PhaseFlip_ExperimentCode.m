@@ -27,7 +27,7 @@ scr=[]; % Everything related to PTB Screen
 stim=[]; % Stimulus Information
 time=[]; % Timing Information
 
-cd 'C:\Users\cbruckmann\Documents\PhD Projects\Proj2 - PhaseFlip\Pilot\Experiment Code Pilot'
+cd '/home/sara/Desktop/labOrious/christina/secondExp'
 %% Input GUI
 input_complete=0;
 reload_data=0; % default: do not reload
@@ -48,8 +48,8 @@ while ~ input_complete
         case 1 % Running a participant
             floatwin=1; % Take over whole screen (0) or just part of it (1)
             SkipSync=1; % Skip Sync Tests (1 when testing on laptop)
-            testing=1; % testing the code? reduces amount of trials to a minimum
-            speedrun=0; % automatically chooses a response, no need to manually click anything (used for testing the code)
+            testing=0; % testing the code? reduces amount of trials to a minimum
+            speedrun=1; % automatically chooses a response, no need to manually click anything (used for testing the code)
             gamification=1; % let participant collect points?
             scr.scope=0; % run scope test?
             reminders=1; % Show reminder intervals?
@@ -59,7 +59,7 @@ while ~ input_complete
             practice=0; % Practice?
             staircase=0; % Staircase?
 
-            % Input Subject Number
+            % Input Subject Numbert
             sub_num_compl=0;
             subresults.subj_num=[];
             while ~sub_num_compl
@@ -144,28 +144,28 @@ while ~ input_complete
             input_complete=1;
         case 2 % Trigger Check
             % Jumps directly to the real experiment to test a trial, this skips JND, Staircase and Practice
-            floatwin=0; 
-            SkipSync=0; 
+            floatwin=0;
+            SkipSync=0;
             testing=1;
             speedrun=0;
             scr.scope=0;
-            gamification=0; 
+            gamification=0;
            reminders=0; % Show reminder intervals?
 
             % Experiment Sections
-            JND_task=0; 
-            staircase=0; 
+            JND_task=0;
+            staircase=0;
             practice=0; % Easy practice?
 
             savefilename=sprintf('trigger_test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
             input_complete=1;
         case 3 % Oscilloscope Test
-            floatwin=0; 
-            SkipSync=0; 
+            floatwin=0;
+            SkipSync=0;
             testing=1;
-            speedrun=0; 
+            speedrun=0;
             scr.scope=1;
-            gamification=0; 
+            gamification=0;
             reminders=0; % Show reminder intervals?
 
             input_complete=1;
@@ -257,10 +257,10 @@ scr.ifi = Screen('GetFlipInterval', scr.win);
 [scr.axisy] = scr.windowRect([2, 4]);
 
 % % Trigger Set-Up
-% triggerPortAddress=hex2dec('FFF8'); 
+% triggerPortAddress=hex2dec('FFF8');
 % triggerPort=io64;
 % s=io64(triggerPort) % Do not suppress output
-% pause(1) % Add a pause so you can inspect the output 
+% pause(1) % Add a pause so you can inspect the output
 % io64(triggerPort, triggerPortAddress, 0); % Sets the trigger to zero for now
 
 
@@ -272,7 +272,7 @@ time.preq=[0.4:0.05:0.6]; % Mask Duration post target and pre-question
 time.cuedur=0.1; % Cue Duration
 time.tardur=0.016; % Target Duration
 time.practiceinterval=0.7; % how long is the interval during practice? (not converted into frames here, happens in trial function)
-     
+
 % Target times for each block type / condition
 time.trialtimes1=[0.7, 0.75, 1.2, 0.5, NaN]; %[timereg timeirr timelong timeshort timecatch];
 time.trialtimes2=[0.75, 0.7, 1.25, 0.55, NaN]; %[timereg timeirr timelong timeshort timecatch];
@@ -330,13 +330,27 @@ circleweak= 0.5; % how weak is the circle compared to mask (lower means less con
 text.keyleft="l";
 text.keyright="r";
 
-text.JND_instructions={'JND Task. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
-text.short_instructions={'JND Task. \n\n Continue with arrows.';'Short Instructions'};
-text.easypractice_instructions={'Easy Practice. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
-text.practice_instructions={'Practice. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
-text.staircase_instructions={'Staircase. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
-text.block1_instructions={'Block 1. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
-text.block2_instructions={'Block 2. \n\n Continue with arrows.';'Instructions Page 1 \n\n Continue with arrows.';'Instructions Page 2 \n\n Continue with arrows.';'Instructions Page 3 \n\n Continue with arrows.'};
+text.instructions={'During this experiment you will be presented with a  visual stimulus whose orientation you are asked to judge. \n The visual stimulus is an oriented Gabor patch, called the target.\n\n\n\n Continue with the arrow.';
+     'Before the Gabor patch, you will see a grey circle. \n This is called the cue and it indicates that the target is about to be presented. \n\n The target (Gabor patch) will be left or right oriented. \n However, note that a target will not always be presented. No question will be asked, if that is case.'
+     'During the experiment you will also asked to remember an indicated interval.\n The interval refers to the difference in time between the presentation of the first cue and a second cue. \n Within this interval, no target is shown.';
+     'Before the start of the experimental blocks, your threshold will be established. \n This consits in presenting the target at different intensity-levels in order to find the optimal one for you! \n'
+     'Lastly, during the experiment you will get the opportunity to obtain points. \n You will be awarded +1 point for every correct answer. The more points, the better your performance! \n\n And a good performance should be rewarded, right? And so it shall, indeed! \n\n\n\nIf you have understood the task and instructions, you can confirm and continue with the arrow.'};
+text.JND_instructions={'During this task you will be asked to compare two intervals. \n The interval refers to the difference in time between the presentation of two cues.\n The target is not shown during the interval. \n\n\n\n Continue with the arrow.';
+     'The intervals shown to you will be numbered. \n If the first interval is longer, then you must press 1. \n If the second interval is longer, then you must press 2. ';
+     'Please note that it is important you do not move during this task, as any movement will introduce noise in the data. \n\n\n\n If you have understood the task and instructions, you can confirm and continue with the arrow.'}
+text.short_instructions={'The visual stimulus that is presented to you is an oriented Gabor patch. \n This is called the target. \n\n Before the Gabor patch, you will see a grey circle. \n This is called the cue and it indicates that the target is about to be presented.';
+     'The target (Gabor patch) will be left or right oriented. \n Press the left key if the Gabor patch is left-oriented.\n Press the right key if the Gabor patch is right-oriented. \n\n Please note that target will not be shown always! \n When the target is not shown, you do not have to press the left or right key.'};
+text.easypractice_instructions={'Easy Practice. \n\n This is the part where you get to practice discriminating the orientation of the target. \n Remember that if you focus on the upper half of the target, it will be easier to discriminate the orientation. \n Press the left key if the Gabor patch is left-oriented.\n Press the right key if the Gabor patch is right-oriented. \n\n\n\n If you are ready, continue with the arrow.'};
+text.practice_instructions={'Now you get to do a longer practice. \n\n Note that the cue will be shown first. \n The target will be presented after the cue is shown. \n\n Remember that if you focus on the upper half of the target, it will be easier to discriminate the orientation. \n\n\n If you are ready, continue with the arrow.'};
+text.staircase_instructions={'Staircase. \n\n In order for you to achieve optimal performance during the experiment, we will first need to establish what is known as threshold. \n\n\n\n Continue with the arrow.';
+    'The target will be shown to you at different contrast levels. \n This is done in order calculate the best intensity-level for you. \n At times it may be slighlty more difficult to discriminate the target, and the orientation, but\n do not worry because this is by design. \n If you are unsure of the orientation, venture your best guess!';
+    'Please report the perceived orientation by using the left or right key. \n Remember: \n the target will always be shown, \n it is easier to discriminate the orientation if you focus on the upper half of the target. \n\n\n\n If you are ready, continue with the arrow.'};
+text.block1_instructions={'Block 1. \n\n Use the arrows to continue';
+     'Press the left key if the target (Gabor patch) is left-oriented.\n Press the right key if the target is right-oriented. \nWhen the target is not shown, you do not have to press the left or right key';
+     'You will be asked to remember a specific interval.\n The interval is indicated by the cues. \n Press key 1 if the first interval is longer than the second interval. \n Press the key 2 if the second interval is longer than the first. \n\n\n\n If you are ready, continue with the arrow.'};
+text.block2_instructions={'Block 2.  \n\n Use the arrows to continue';
+    'Press the left key if the target (Gabor patch) is left-oriented.\n Press the right key if the target is right-oriented. \nWhen the target is not shown, you do not have to press the left or right key';
+     'You will be asked to remember a specific interval.\n The interval is indicated by the cues. \n Press key 1 if the first interval is longer than the second interval. \n Press the key 2 if the second interval is longer than the first. \n\n\n\n If you are ready, continue with the arrow.'};
 %% Create Trial Matrix and Design
 % 400 trials in total (bit less than 45 min at 5,5 seconds per trial)
 % 50 trials per block
@@ -413,11 +427,11 @@ end
 
 % %% Trigger Vector
 % stim.triggervector=table();
-% 
+%
 % stim.triggervector(1,:)={100,101,110,111,112,113,114,120,121,122,130,131,140,141,142,143,150,151,152};
 % stim.triggervector(2,:)={200,201,210,211,212,213,214,220,221,222,230,231,240,241,242,243,250,251,252};
 % stim.triggervector(3,:)={1};% Set all to one for scope test
-% 
+%
 % stim.triggervector.Properties.VariableNames={'BlockStart','MaskOnset','CueOnsetRegular','CueOnsetIrregular','CueOnsetCatch','CueOnsetShort','CueOnsetLong','TargetOnsetLeft',...
 %     'TargetOnsetRight','TargetOnsetCatch','MaskOffset','QuestionOnset','ResponseLeftCorrect', 'ResponseLeftIncorrect','ResponseRightCorrect','ResponseRightIncorrect','Reminder Interval Mask Onset','Reminder Interval Cue 1','Reminder Interval Cue 2'};
 %% Create Stimuli
@@ -454,6 +468,14 @@ for fridx=1:maxframescue*2
 
         % Blend inside
         cueStim(gausscw>0.3)=0.5+0.5*(circleweak*randMaskC(gausscw>0.3)+(1-circleweak)*rescaledCS(gausscw>0.3));
+
+        % colored cue (- and it's pink just for you)
+        cueCol = repmat(cueStim, [1, 1, 3]); % expand the 2D matrix to a 3D one which is basically the color matrix
+        cueCol(:, :, 1) = cueCol(:, :, 1) + 0.5*gausscw; % this is the red
+        cueCol(:, :, 2) = cueCol(:, :, 2) + 0.2*gausscw; % this is green
+        cueCol(:, :, 3) = cueCol(:, :, 3) + 0.3*gausscw; % this is blue
+        stim.colCueTex(fridx) = Screen('MakeTexture', scr.win, cueCol);
+
     else
         % % Make Cues and Warning Signal Textures for scope test
         cueStim=0.01+stim.maskintensity*(rand(stim.rectSize)-0.5); % dark noisy mask
@@ -507,6 +529,7 @@ end
          % Introduction
          if ~reload_data
              starttext='Welcome to the experiment. \n\n Press any button to start.';
+             navipage(scr.win, text.instructions) % long instructions
          else
              starttext='Welcome back. \n\n  Press any button to continue.';
          end
@@ -538,7 +561,7 @@ end
 %                  io64(triggerPort, triggerPortAddress, 0);
 
                  unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
-                
+
                  % Confirm or repeat
                  adjusttext=sprintf('Comparison Value: %f \n\n Confirm (1) or Repeat (0)?',JND);
                  [response]=respfunction(scr.win,adjusttext,["1","0"]);
@@ -648,7 +671,7 @@ end
          %% Run Staircase
          if staircase && ~subresults.status.staircase_done
              navipage(scr.win,text.staircase_instructions) % Show instructions
-             [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent);
+             [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent,speedrun);
          end
 
          % Accept Staircase Output or Adjust Gabor Difficulty
@@ -680,7 +703,7 @@ end
              tottrialcount=subresults.status.last_block*ntrials+1; % start at first trial of next block
          else
              tottrialcount=1; % total trial counter
- 
+
              subresults.status.total_points=0;
              navipage(scr.win,text.block1_instructions) % Show instructions for first block
          end
@@ -743,7 +766,7 @@ end
 
                      if reminders % If reminders are activated
                          if ~mod(t,4) % Show reminder interval every nth trial
-                             timing_reminder(scr, time, stim,trialinfo)
+                             timing_reminder(scr, time, stim, trialinfo)
                          end
                      end
 
@@ -831,7 +854,7 @@ end
  else
      %% Scope Test
           scopedone=0;
-     
+
      while  ~scopedone
      DrawFormattedText(scr.win,'Oscilloscope Test. \n\n Press any button to select timing.', 'center', 'center', scr.fontcolour);
      Screen('Flip', scr.win);
@@ -943,7 +966,7 @@ end
 %         trvec=1;
 %     else
 %         % Which condition
-%         switch trialinfoin(3) 
+%         switch trialinfoin(3)
 %             case 1
 %                 % Which Trial Type
 %                 switch trialinfoin(1)
@@ -958,7 +981,7 @@ end
 %                     case 5
 %                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetCatch'}];
 %                 end
-%                 
+%
 %                 % Which target orientation
 %                 if trialinfoin(1)==5 % if catch trial
 %                     trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetCatch'}];
@@ -966,7 +989,7 @@ end
 %                     switch targetorient
 %                         case 1
 %                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetLeft'}];
-%                         case 0
+%                         case 2
 %                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetRight'}];
 %                     end
 %                 end
@@ -984,7 +1007,7 @@ end
 %                     case 5
 %                         trvec=[stim.triggervector{trialinfoin(3),'CueOnsetCatch'}];
 %                 end
-%                 
+%
 %                 % Which target orientation
 %                 if trialinfoin(1)==5 % if catch trial
 %                     trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetCatch'}];
@@ -992,7 +1015,7 @@ end
 %                     switch targetorient
 %                         case 1
 %                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetLeft'}];
-%                         case 0
+%                         case 2
 %                             trvec=[trvec, stim.triggervector{trialinfoin(3),'TargetOnsetRight'}];
 %                     end
 %                 end
@@ -1024,7 +1047,7 @@ for fixidx=1:initmask
 end
 
 %Cue Onset
-for cueidx=1:time.cuedur 
+for cueidx=1:time.cuedur
     Screen('DrawTexture', scr.win, cuetex(ccue), [], [], 0);
     Screen('Flip', scr.win);
 %     if cueidx==1
@@ -1170,7 +1193,7 @@ currlevel=gaborcontrast;
     currentleveltext=sprintf('Current luminance level: %.2f',currlevel);
     DrawFormattedText(scr.win,currentleveltext, 'center', 'center', scr.fontcolour);
     Screen('Flip', scr.win);
-    
+
     [keyDown, ~, keyName] = KbCheck;
     if keyDown
         if strcmp(KbName(keyName), 'UpArrow')==1
@@ -1187,7 +1210,7 @@ currlevel=gaborcontrast;
             sca
             return
         end
-    
+
         if currlevel<0.01 % cannot go below 0.01
             currlevel=0.01;
         elseif currlevel>0.99 % or above 0.99
@@ -1199,7 +1222,7 @@ end
 %% Staircase Function
 % Runs 1 up 3 down staircase
 % Calls Trial Function
-function [thresholdres,newgaborpercent]=staircasefun(reversals,scr,time,text,stim,oldgaborpercent)
+function [thresholdres,newgaborpercent]=staircasefun(reversals,scr,time,text,stim,oldgaborpercent, speedrun)
     finishstair=0;
     threshrun=1;
     %initstep=0.05; % initial step size adjustment until 1st rev
@@ -1285,7 +1308,7 @@ function [thresholdres,newgaborpercent]=staircasefun(reversals,scr,time,text,sti
     end
 end
 
-%% Just-noticable-difference Function 
+%% Just-noticable-difference Function
 % One up, one down for now. Change if needed
 % Make sure to jitter the scr.background noise so that the longer interval is not obvious by noise alone.
 % Maybe remove backfground noise?
@@ -1297,7 +1320,7 @@ navipage(scr.win,instr) % Show instructions
 % Parameters
 comparison_length=2; % start value for comparison interval length in s
 standard_length=0.7; % length of standrad interval (ideally the same as the interval shown in the main task)
-init_adjustment_steps=0.3; % bigger steps in the beginning (first descent) 
+init_adjustment_steps=0.3; % bigger steps in the beginning (first descent)
 adjustment_steps=0.05; % size of adjustment each step in seconds
 maxreversals=5;
 avg_trials=5; % average across how many of the last trials to calculate JND?
@@ -1306,7 +1329,7 @@ avg_trials=5; % average across how many of the last trials to calculate JND?
 jndfound=0;
 prevstep='down'; % preallocate previous response for reversal counter
 revers_count=0; %preallocate reversal counter
-JND_results=table(); %preallocate results 
+JND_results=table(); %preallocate results
 currtrial=0;
 
 % Shuffle textures
@@ -1335,7 +1358,7 @@ while ~jndfound
         end
 
         % Interval
-        for cueidx=1:time.cuedur 
+        for cueidx=1:time.cuedur
             Screen('DrawTexture', scr.win, cuetex(ccue1), [], [], 0);
             DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
@@ -1411,7 +1434,7 @@ while ~jndfound
 
         % Register data
         JND_results(currtrial,:)={standard_length, comparison_length, response, resp_eval,currstep};
-    % Update Comparison or JND Found? 
+    % Update Comparison or JND Found?
     if revers_count==maxreversals % if max reversals has been reached, take the average across the last 10 reversals as the JND
         jndfound=1;
         JND=mean(JND_results{end-avg_trials:end,2}); % average across last trials to establish JND
@@ -1431,26 +1454,26 @@ function timing_reminder(scr, time, stim, trialinfoin)
     preq=time.preq(randi(length(time.preq)));
     initmask=time.initmask(randi(length(time.initmask)));
     time.ISI=round(trialinfoin(2)/scr.ifi); % convert current target interval to frames
-    
+
     % Shuffle textures and initialize counters
     cnoise=1;
     ccue=1;
-    cuetex=stim.cuetex(randperm(length(stim.cuetex)));
+    cuetex=stim.colCueTex(randperm(length(stim.colCueTex)));
     noisetex=stim.noisetex(randperm(length(stim.noisetex)));
 
     % Text
     DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
     Screen('Flip', scr.win);
     pause (1)
-    
+
     % Start Trial
-    
+
     % Inter Trial Interval
     for fixidx=1:ITI
         DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
         Screen('Flip', scr.win);
     end
-    
+
     % Mask Onset
     for fixidx=1:initmask
         DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
@@ -1463,7 +1486,7 @@ function timing_reminder(scr, time, stim, trialinfoin)
         %     end
         cnoise=cnoise+1;
     end
-    
+
     %Cue Onset
     for cueidx=1:time.cuedur
         DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
@@ -1476,15 +1499,15 @@ function timing_reminder(scr, time, stim, trialinfoin)
         %     end
         ccue=ccue+1;
     end
-    
+
     % Inter Stimulus Interval
     for noiseidx=1:time.ISI
         DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
-        Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
+        Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0 );
         Screen('Flip', scr.win);
         cnoise=cnoise+1;
     end
-    
+
     % Target Presentation
     for taridx=1:time.tardur
         DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
@@ -1496,7 +1519,7 @@ function timing_reminder(scr, time, stim, trialinfoin)
         %     end
         Screen('Flip', scr.win);
     end
-    
+
     % Post Target Mask
     for noiseidx=1:preq
         DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
