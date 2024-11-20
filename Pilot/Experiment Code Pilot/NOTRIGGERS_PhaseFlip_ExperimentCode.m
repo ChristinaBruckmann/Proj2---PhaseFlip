@@ -1,20 +1,12 @@
 %% Experiment Code Project 2 - Phase Flip
 % To do:
 
-    % Minor Fixes:
-        % Recalculate max-frames
-        % Option to adjust gabor intensity after block 1?
 
     % Major Steps:
         % Write Instructions
-        % Test code functionality for the whole experiment
-
-    % Discuss with Assaf:
-        % Constraints for Matrix Shuffle
-        % Add block label to the experiment?
         % Record also JND Task EEG?
 
-% Requires the custom functions  PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m
+% Requires the custom functions  PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m, as well as palamedes toolbox
 
 % Clear
 sca;
@@ -300,11 +292,11 @@ stim.noiseMean= 50;
 stim.maskintensity=0.6;
 practicegabor=0.7; % practice gabor intensity for easy practice
 
-if reload_data && subresults.status.last_block>0
-    gaborpercent=subresults.status.gaborintensity;
-else % load previous gabor intensity
+% if reload_data && subresults.status.last_block>0
+%     gaborpercent=subresults.status.gaborintensity;
+% else % load previous gabor intensity
     gaborpercent=1-stim.maskintensity; % Initialize like this, adjust with staircase later
-end
+% end
 
 % Cue parameters for scope test
 stim.baseRect = [0 0 120 120];
@@ -350,9 +342,9 @@ text.block1_instructions={'Block 1. \n\n Use the arrows to continue';
 text.block2_instructions={'Block 2.  \n\n Use the arrows to continue';
     'Press the left key if the target (Gabor patch) is left-oriented.\n Press the right key if the target is right-oriented. \nWhen the target is not shown, you do not have to press the left or right key'};
 %% Create Trial Matrix and Design
-% 400 trials in total (bit less than 45 min at 5,5 seconds per trial)
+% 300 trials in total (bit less than 45 min at 5,5 seconds per trial)
 % 50 trials per block
-% 8 blocks
+
 if testing % shorter version to test the code
     % Blocks, Trials etc.
     cond=[1 2]; % conditions (1=800ms, 2=850ms)
@@ -368,25 +360,25 @@ if testing % shorter version to test the code
     ncatchtrials=1;
 else % experiment settings
     % Blocks, Trials etc.
-    if subresults.subj_num % counterbalance
+    if mod(subresults.subj_num,2) % counterbalance
         cond=[1 2]; % conditions (1=800ms, 2=850ms)
     else
         cond=[2 1]; % conditions (1=800ms, 2=850ms)
     end
     nblocks=length(cond); % total blocks
-    ntrials=100; % trials per block
+    ntrials=150; % trials per block
     ntrialstot=nblocks*ntrials;
 
     % Split per block
-    nregular=60;
+    nregular=80;
     nirregular=0;
-    nlong=4;
-    nshort=4;
+    nlong=12;
+    nshort=12;
 
     % Left overs are assigned to catch trials (throw error if none are left)
-    if (ntrials-nregular-nirregular-nlong-nshort)>49
+    if (ntrials-nregular-nirregular-nlong-nshort)>=ntrials
         error('No catch trials left. Double check trial matrix generation. Catch trials are the most important part of this project.')
-    elseif (ntrials-nregular-nirregular-nlong-nshort)>45
+    elseif (ntrials-nregular-nirregular-nlong-nshort)>(ntrials-5)
         warning('Using less than 5 catch trials per block. This is not advised. Please reconsider.')
     else
         ncatchtrials=ntrials-nregular-nirregular-nlong-nshort;
@@ -774,6 +766,13 @@ end
 
                  else % If trial was interrupted, repeat the trial and do not save output
                      DrawFormattedText(scr.win,'Press any button to continue the task.', 'center', 'center', scr.fontcolour);
+                     Screen('Flip', scr.win);
+                     KbStrokeWait;
+                 end
+
+                 % Take a break every 50 trials (two breaks per 150 trials) but not at after the 150 trial
+                 if (~mod(t,50)) && (t~=ntrials)
+                     DrawFormattedText(scr.win,'Please take a short break \n\n Press any button to continue', 'center', 'center', scr.fontcolour);
                      Screen('Flip', scr.win);
                      KbStrokeWait;
                  end
