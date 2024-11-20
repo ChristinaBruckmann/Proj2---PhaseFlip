@@ -696,31 +696,8 @@ end
              %              io64(triggerPort, triggerPortAddress, 0);
 
              % Run 20 Trials at full visbility
-             for vistrials=1:20
-                 trialinfo=subresults.trialmatrix(tottrialcount,:); % Choose trialinfo from trialmatrix
-                 [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,UD.xCurrent,trialinfo,speedrun); % Run trial
-
-                 % Gamification Update
-                 if gamification && RespEval==1 % If correct, update points
-                     subresults.status.total_points=subresults.status.total_points+1;
-                     block_points=block_points+1;
-                     DrawFormattedText(scr.win,'Correct! \n\n +1 Point', 'center', 'center', scr.fontcolour);
-                     Screen('Flip', scr.win);
-                     pause(0.5)
-                 elseif gamification && RespEval==0
-                     DrawFormattedText(scr.win,'Incorrect.', 'center', 'center', scr.fontcolour);
-                     Screen('Flip', scr.win);
-                     pause(0.5)
-                 elseif gamification
-                     DrawFormattedText(scr.win,'No target.', 'center', 'center', scr.fontcolour);
-                     Screen('Flip', scr.win);
-                     pause(0.5)
-                 end
-             end
-
-             DrawFormattedText(scr.win,'Now we will make the target harder to see. \n\n Press any button to start.', 'center', 'center', scr.fontcolour);
-             Screen('Flip', scr.win);
-             KbStrokeWait;
+              trialinfo=[1 b]; % Choose trialinfo from trialmatrix
+              [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,UD.xCurrent,trialinfo,speedrun); % Run trial
 
              % Run Real Trials
              for t=1:ntrials
@@ -1175,9 +1152,9 @@ elseif trialinfoin(1)==5 % If catch, NaN in all fields
     Resp=NaN;
     RespEval=NaN;
 else % in speed run assign random RT and a probability response
-    noise=-0.02 + (0.02 - (-0.02)) * rand; % noise of theoretical responder
-    theothreshold = 0.5+noise; % threshold of theoretical responder
-    RT=rand(1); 
+    noise=-0.03 + (0.03 - (-0.03)) * rand; % noise of theoretical responder
+    theothreshold = 0.44+noise; % threshold of theoretical responder
+    RT=rand(1);
     warning=0;
     if theothreshold<=gaborpercentin % if gabor percent is above theoretical threshold count as correct
         RespEval=1;

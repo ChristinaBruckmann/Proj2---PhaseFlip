@@ -57,6 +57,7 @@ while ~ input_complete
             % Experiment Sections
             JND_task=0; % JND Task?
             practice=0; % Practice?
+            staircase=0; % Staircase?
 
             % Input Subject Numbert
             sub_num_compl=0;
@@ -153,6 +154,7 @@ while ~ input_complete
 
             % Experiment Sections
             JND_task=0;
+            staircase=0;
             practice=0; % Easy practice?
 
             savefilename=sprintf('trigger_test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
@@ -170,7 +172,7 @@ while ~ input_complete
         case 4 % Debugging
             % Choose which debugging options you want
             prompt = 'Select debugging options:';
-            options = {'Reduced_TrialN', 'Speedrun', 'JNDTask','Practice','SkipSync','Floating_Window','Gamification','ReminderIntervals'};
+            options = {'Reduced_TrialN', 'Speedrun', 'JNDTask','Staircase','Practice','SkipSync','Floating_Window','Gamification','ReminderIntervals'};
 
             % Display list dialog and get selected indices
             [selectedIndices, ~] = listdlg('PromptString', prompt, ...
@@ -195,11 +197,12 @@ while ~ input_complete
             testing = varStruct.(options{1});
             speedrun = varStruct.(options{2});
             JND_task = varStruct.(options{3});
-            practice = varStruct.(options{4});
-            SkipSync=varStruct.(options{5});
-            floatwin=varStruct.(options{6});
-            gamification=varStruct.(options{7});
-            reminders=varStruct.(options{8});
+            staircase = varStruct.(options{4});
+            practice = varStruct.(options{5});
+            SkipSync=varStruct.(options{6});
+            floatwin=varStruct.(options{7});
+            gamification=varStruct.(options{8});
+            reminders=varStruct.(options{9});
 
             savefilename=sprintf('test_%s.mat', datestr(now, 'yyyy-mm-dd_HH-MM-SS'));
             scr.scope=0;
@@ -265,7 +268,6 @@ scr.ifi = Screen('GetFlipInterval', scr.win);
 %% Timing Parameters
 
 time.ITI=[1.85:0.1:2.15]; % Inter-Trial Interval
-time.ITIreminder=[0.85:0.1:1.15]; % ITI for the reminder function (shorter to not lose time)
 time.initmask=[0.75:0.1:1.25];% Initial Mask pre-WS
 time.preq=[0.4:0.05:0.6]; % Mask Duration post target and pre-question
 time.cuedur=0.1; % Cue Duration
@@ -281,7 +283,6 @@ subresults.timeinsec=time;
 
 % Convert into frames
 time.ITI=round(time.ITI/scr.ifi); % Inter-Trial Interval
-time.ITIreminder=round(time.ITIreminder/scr.ifi); % Inter-Trial Interval
 time.initmask=round(time.initmask/scr.ifi); % Initial Mask pre-WS
 time.preq=round(time.preq/scr.ifi); % Pre-Question Interval
 time.cuedur=round(time.cuedur/scr.ifi); % Cue Duration
@@ -369,16 +370,16 @@ if testing % shorter version to test the code
 else % experiment settings
     % Blocks, Trials etc.
     if subresults.subj_num % counterbalance
-        cond=[1 2]; % conditions (1=800ms, 2=850ms)
+        cond=[1 2 1 2 1 2 1 2]; % conditions (1=800ms, 2=850ms)
     else
-        cond=[2 1]; % conditions (1=800ms, 2=850ms)
+        cond=[2 1 2 1 2 1 2 1]; % conditions (1=800ms, 2=850ms)
     end
     nblocks=length(cond); % total blocks
-    ntrials=100; % trials per block
+    ntrials=50; % trials per block
     ntrialstot=nblocks*ntrials;
 
     % Split per block
-    nregular=60;
+    nregular=25;
     nirregular=0;
     nlong=4;
     nshort=4;
@@ -394,7 +395,7 @@ else % experiment settings
 end
 
 if ~reload_data % only create new matrix if there is no previous one
-    % Create trial matrix (final matrix columns: trial type, trial timing, condition of the block, nblock)
+    % Create trial matrix
     trialmatrix=[]; % Preallocate matrix
     for bl=1:nblocks % Create all blocks
         if cond(bl)==1
@@ -414,24 +415,11 @@ if ~reload_data % only create new matrix if there is no previous one
             trialmatrix_temp=[trialmatrix_temp; temp]; % append to block matrix
         end
 
-        % Shuffle with constraints
-        cond_fulfilled=0;
-        while ~cond_fulfilled
-            trialmatrix_temp=trialmatrix_temp(randperm(size(trialmatrix_temp,1)),:);
+        % Shuffle (ADD CONTRAINTS!)
+        trialmatrix_temp=trialmatrix_temp(randperm(size(trialmatrix_temp,1)),:);
 
-            if ~testing % only makes sense if trial number is not reduced
-                % Rules
-                first_regular=trialmatrix_temp(1:10,1)==1; % first x (10) trials need to be regular (for training purposes)
-                catchConsec=max(diff([0; find(trialmatrix_temp(:,1)~=5); (size(trialmatrix_temp,1)+1)])-1); % maximum catch trials in a row
-
-                if (mean(first_regular)==1) && (catchConsec<4) % if rules are fulfilled (first trials are all regular and no more than 3 consequtive catch trials in a row)
-                    cond_fulfilled=1;
-                end
-            else
-                cond_fulfilled=1;
-            end
-        end
-        trialmatrix=[trialmatrix; trialmatrix_temp]; % concatenate trialmatrices for blocks
+        % Append to main matrix
+        trialmatrix=[trialmatrix; trialmatrix_temp];
     end
     subresults.trialmatrix=trialmatrix;
 end
@@ -520,6 +508,7 @@ if ~scr.scope
     else
         subresults.status.JND_done=0;
         subresults.status.practice_done=0;
+        subresults.status.staircase_done=0;
         subresults.status.last_block=0;
         subresults.status.total_points=0;
     end
@@ -601,7 +590,7 @@ end
              end
          end
 
-         %% Run Easy Practice
+         %% Run Practice
          if practice
              easypractice=1;
          end
@@ -642,42 +631,83 @@ end
                  end
              end
              subresults.status.practice_done=1;
+
+             % Normal Practice
+               navipage(scr.win,text.practice_instructions) % Show instructions
+              [~, RespEval, ~, ~]=trialfunction(scr,time,text,stim,gaborpercent,[6, time.practiceinterval],speedrun);
+
+                 % Print evaluation
+                 if RespEval==1
+                     DrawFormattedText(scr.win,'Correct', 'center', 'center', scr.fontcolour);
+                     Screen('Flip', scr.win);
+                     pause(1)
+                 else
+                     DrawFormattedText(scr.win,'Incorrect', 'center', 'center', scr.fontcolour);
+                     Screen('Flip', scr.win);
+                     pause(1)
+                 end
+
+                 % Another one? Or show instructions again? Or adjust gabor visibility?
+                 while true
+                     response=respfunction(scr.win,'Repeat? (1) \n\n Show Instructions (2)? \n\n Return to easy practice? (3) \n\n Continue? (4)',["1","2","3","4"]);
+                     switch double(response)
+                         case 1
+                             break % get out of the true loop and run another easy practice
+                         case 2
+                             navipage(scr.win,text.short_instructions) % show instructions
+                             continue % then show the menu again
+                         case 3
+                             easypractice=1; % turn on easy practice
+                             break %before returning to the beginning
+                         case 4
+                             practice=0; % finish easy practice
+                             break % break out of true loop
+                     end
+                 end
+
          end
 
-         %% Run Blocks
+         %% Run Staircase
+         if staircase && ~subresults.status.staircase_done
+             navipage(scr.win,text.staircase_instructions) % Show instructions
+             [threshres,gaborpercent]=staircasefun(3,scr,time,text,stim,gaborpercent,speedrun);
+         end
 
-         % Reload data or initiate
+         % Accept Staircase Output or Adjust Gabor Difficulty
+         if ~reload_data
+             adjusttext=sprintf('Post-staircase intensity: %.2f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
+         else
+             adjusttext=sprintf('Last Intensity: %.2f \n\n Confirm (2) or Adjust (3)?',gaborpercent);
+         end
+
+         [response]=respfunction(scr.win,adjusttext,["2","3"]);
+         if double(response)==3 % if adjustment requested, ask for confirmation
+             confirmationtext='Are you sure? \n\nIt is reccommended to stick to the staircase value. \n\n\n\n Accept staircase value (2) or Adjust anyway (3)?';
+             [response]=respfunction(scr.win,confirmationtext,["2","3"]);
+             if double(response)==3
+                 gaborpercent=adjustintensity(scr, gaborpercent);
+             end
+         end
+
+         % Save and Display the setting that will be used
+         subresults.status.gaborintensity=gaborpercent;
+         save(savefilename,"subresults")
+         intconfirmed=sprintf('Confirmed Intensity: %.2f \n\nPress any button to continue.',gaborpercent);
+         DrawFormattedText(scr.win,intconfirmed, 'center', 'center', scr.fontcolour);
+         Screen('Flip', scr.win);
+         KbStrokeWait;
+
+         %% Run Blocks
          if reload_data
              tottrialcount=subresults.status.last_block*ntrials+1; % start at first trial of next block
          else
              tottrialcount=1; % total trial counter
+
              subresults.status.total_points=0;
              navipage(scr.win,text.block1_instructions) % Show instructions for first block
          end
 
-         % Run blocks
          for b=startblock:nblocks
-
-             % Preparation and Initialization
-             currcond=cond(b); % Determine current condition
-             block_points=0; % Initialize gamification block points
-
-             % Initialize Palamedes Staircase Procedure
-             up = 1;                     % increase after 1 wrong
-             down = 3;                   % decrease after 3 consecutive right
-             StepSizeDown = 0.05; % for the first trials, afterwards this gets reduced once we get closer to the threshold
-             StepSizeUp = 0.05;
-             stopcriterion = 'trials';
-             stoprule = ntrials+1000; % needs to be defined, but I don't want it to stop by itself so I set it to higher than the trial number
-             startvalue = gaborpercent;           %intensity on first trial
-             xMax=1; % maximum gabor intensity
-             xMin=0; % minimum gabor intensity
-
-             UD = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',StepSizeDown,'StepSizeUp', ...
-                 StepSizeUp,'stopcriterion',stopcriterion,'stoprule',stoprule, ...
-                 'startvalue',startvalue, 'xMax',xMax,'xMin',xMin);
-
-             % Show Instructions
              starttext=sprintf('Ready? \n\n Press any key to start block %i',b);
              DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
              Screen('Flip', scr.win);
@@ -690,64 +720,31 @@ end
              Screen('Flip', scr.win);
              pause(3)
 
+             % Determine current condition
+             currcond=cond(b);
+
+             % Initialize gamification block points
+             block_points=0;
+
              %              % Block Onset Trigger
              %              io64(triggerPort, triggerPortAddress,stim.triggervector{cond(b),'BlockStart'});
              %              WaitSecs(0.1)
              %              io64(triggerPort, triggerPortAddress, 0);
 
-             % Run 20 Trials at full visbility
-             for vistrials=1:20
-                 trialinfo=subresults.trialmatrix(tottrialcount,:); % Choose trialinfo from trialmatrix
-                 [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,UD.xCurrent,trialinfo,speedrun); % Run trial
-
-                 % Gamification Update
-                 if gamification && RespEval==1 % If correct, update points
-                     subresults.status.total_points=subresults.status.total_points+1;
-                     block_points=block_points+1;
-                     DrawFormattedText(scr.win,'Correct! \n\n +1 Point', 'center', 'center', scr.fontcolour);
-                     Screen('Flip', scr.win);
-                     pause(0.5)
-                 elseif gamification && RespEval==0
-                     DrawFormattedText(scr.win,'Incorrect.', 'center', 'center', scr.fontcolour);
-                     Screen('Flip', scr.win);
-                     pause(0.5)
-                 elseif gamification
-                     DrawFormattedText(scr.win,'No target.', 'center', 'center', scr.fontcolour);
-                     Screen('Flip', scr.win);
-                     pause(0.5)
-                 end
-             end
-
-             DrawFormattedText(scr.win,'Now we will make the target harder to see. \n\n Press any button to start.', 'center', 'center', scr.fontcolour);
-             Screen('Flip', scr.win);
-             KbStrokeWait;
-
-             % Run Real Trials
+             % Run Trials
              for t=1:ntrials
 
                  trialinfo=subresults.trialmatrix(tottrialcount,:); % Choose trialinfo from trialmatrix
 
-                 [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,UD.xCurrent,trialinfo,speedrun); % Run trial
-
-                 % Evaluate response and update everything
+                 [Resp, RespEval, RT, warning]=trialfunction(scr,time,text,stim,gaborpercent,trialinfo,speedrun); % Run trial
 
                  if Resp~=9% If trial was not interruped, save and proceed as normal
-                     resulttable(tottrialcount,:)=table(currcond, b, t, trialinfo(1), trialinfo(2),RT, Resp, RespEval, warning, UD.xCurrent,stim.maskintensity, 'VariableNames',{'Condition','Block', ...
-                         'Trial','Trial Type','Target Interval','Reaction Time', 'Orientation Reseponse', 'Correct/Incorrect', 'Late Warning', 'Gabor Strength','Mask Intensity'}); % save trial in result table
-                     subresults.data=resulttable; % save result table
+                     resulttable(tottrialcount,:)=table(currcond, b, t, trialinfo(1), trialinfo(2),RT, Resp, RespEval, warning, gaborpercent,stim.maskintensity, 'VariableNames',{'Condition','Block', ...
+                         'Trial','Trial Type','Target Interval','Reaction Time', 'Orientation Reseponse', 'Correct/Incorrect', 'Late Warning', 'Gabor Strength','Mask Intensity'});
+                     subresults.data=resulttable;
                      tottrialcount=tottrialcount+1; % update total trial counter
-                     save(savefilename,"subresults"); % save subresults
-
-                     % Update Gabor Intensity (only if the trial was a regular one)
-                     if trialinfo(1)==1
-                     UD = PAL_AMUD_updateUD(UD, RespEval); % update UD structure
-                     end
-
-                     % Update step size after third reversal (to narrow the steps, assuming the participant has now reached a value around their threshold)
-                     if ismember(3,UD.reversal)
-                     UD = PAL_AMUD_setupUD(UD,'StepSizeDown',0.01,'StepSizeUp', ...
-                         0.01);
-                     end
+                     %subresults.status.last_trial=tottrialcount; % save status
+                     save(savefilename,"subresults");
 
                      % Gamification Update
                      if gamification && RespEval==1 % If correct, update points
@@ -1174,17 +1171,14 @@ elseif trialinfoin(1)==5 % If catch, NaN in all fields
     warning=NaN;
     Resp=NaN;
     RespEval=NaN;
-else % in speed run assign random RT and a probability response
-    noise=-0.02 + (0.02 - (-0.02)) * rand; % noise of theoretical responder
-    theothreshold = 0.5+noise; % threshold of theoretical responder
-    RT=rand(1); 
+else % in speed run assign random RT and random response.
+    RT=rand(1);
     warning=0;
-    if theothreshold<=gaborpercentin % if gabor percent is above theoretical threshold count as correct
+    Resp=randi([0,1]);
+    if targetorient==Resp
         RespEval=1;
-        Resp=1;
     else
         RespEval=0;
-        Resp=0;
     end
 end
 end
@@ -1224,6 +1218,95 @@ currlevel=gaborcontrast;
     end
     end
 end
+%% Staircase Function
+% Runs 1 up 3 down staircase
+% Calls Trial Function
+function [thresholdres,newgaborpercent]=staircasefun(reversals,scr,time,text,stim,oldgaborpercent, speedrun)
+    finishstair=0;
+    threshrun=1;
+    %initstep=0.05; % initial step size adjustment until 1st rev
+    stepsize=0.05; % after first reversal adjust by this step size
+    currentgabor=oldgaborpercent;
+    while ~finishstair
+        thresholdfound=0;
+        streak=0; % initiate correct response streak
+        trialcount=0; % initiate trial counter
+        reverscount=0; % initiate reversal counter
+        firstrev=0; % initialize first reversal
+        lastchange='undef' ; % initialize last change direction var
+        while ~thresholdfound
+            [resp, respeval, ~, ~]=trialfunction(scr,time,text,stim,currentgabor,[0, 0.725],speedrun); % Run trial function (last input is trial type (not relevant here) and target interval duration (between cond 1 and 2 here)r
+
+            if ~isnan(resp) % if trial was not interrupted, continue as normal
+                trialcount=trialcount+1;
+
+                % Save
+                thresholdres(threshrun,trialcount)=currentgabor;
+
+                % Update
+                if respeval==1 % if correct, increase streak
+                    streak=streak+1;
+                    if streak==3 % if third one in a row correct
+                        currentgabor=currentgabor-stepsize; % decrease by step size
+                        if strcmp(lastchange,'inc')
+                            reverscount=reverscount+1; % update reversal counter
+                        end
+                        lastchange='dec'; % register last change as decrease
+                        if firstrev==0 % If this was the first reversal, count the trial on which this happened
+                            firstrev=trialcount;
+                        end
+                        streak=0; % restart streak counter
+                        %prevstreak=1; % register that this was a streak
+                    end
+                else % if incorrect, reset streak and make task easier
+                    streak=0;
+                    %prevstreak=0; % reset previous streak variable
+                    currentgabor=currentgabor+stepsize;
+                    if strcmp(lastchange,'dec')
+                        reverscount=reverscount+1; % update reversal counter
+                    end
+                    lastchange='inc';
+                    if firstrev==0 % If this was the first reversal, count the trial on which this happened
+                        firstrev=trialcount;
+                    end
+                end
+
+                % End after n reversals has been reached
+                if reverscount==reversals
+                    thresholdfound=1;
+                    newgaborpercent=mean(thresholdres(threshrun,firstrev:end)); % Calculate new threshold based on average from first reversal
+                end
+
+            else
+                % if trial was interrupted, do not evaluate anything, do not update trial counter and just continue with the next iteration
+                continue
+            end
+        end
+
+        % Staircase Done. Please wait for experimenter
+        DrawFormattedText(scr.win,'Task finished. Please wait for the experimenter.', 'center', 'center', scr.fontcolour);
+        Screen('Flip', scr.win);
+        KbStrokeWait;
+        KbStrokeWait;
+        KbStrokeWait;
+
+        % Plot
+        thresh_fig=figure('Visible', 'off');
+        plot(thresholdres(threshrun,:));yline(newgaborpercent);ylim([0 1]); title('Staircase Result');xlabel('Trial');ylabel('Gabor Contrast')
+        PTB_plotfig(thresh_fig, scr.win, "Staircase_Figure", 0) % plot figure to PTB screen with this custom function
+        unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
+
+        % Repeat?
+        [response]=respfunction(scr.win,'Repeat threshold? (y-2/n-3)',["2","3"]);
+        if double(response)==2 % if repeat
+            threshrun=threshrun+1;
+        else % end staircase and save result
+            finishstair=1;
+        end
+
+    end
+end
+
 %% Just-noticable-difference Function
 % One up, one down for now. Change if needed
 % Make sure to jitter the scr.background noise so that the longer interval is not obvious by noise alone.
@@ -1366,18 +1449,10 @@ end
 function timing_reminder(scr, time, stim, trialinfoin)
 
     % Randomly choose from jittered timings
-    ITI=time.ITIreminder(randi(length(time.ITIreminder)));
+    ITI=time.ITI(randi(length(time.ITI)));
     preq=time.preq(randi(length(time.preq)));
     initmask=time.initmask(randi(length(time.initmask)));
-
-    % Select regular timing of the current condition as ISI (first trial is always regular)
-    if trialinfoin(3)==1
-        time.ISI=round(time.trialtimes1(1)/scr.ifi); % convert current target interval to frames
-    elseif trialinfoin(3)==2
-        time.ISI=round(time.trialtimes1(2)/scr.ifi); % convert current target interval to frames
-    else
-        error("Error in selecting the timing reminder interval")
-    end
+    time.ISI=round(trialinfoin(2)/scr.ifi); % convert current target interval to frames
 
     % Shuffle textures and initialize counters
     cnoise=1;
@@ -1385,10 +1460,10 @@ function timing_reminder(scr, time, stim, trialinfoin)
     cuetex=stim.colCueTex(randperm(length(stim.colCueTex)));
     noisetex=stim.noisetex(randperm(length(stim.noisetex)));
 
-%     % Text
-%     DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
-%     Screen('Flip', scr.win);
-%     pause (1)
+    % Text
+    DrawFormattedText(scr.win,'Remember this interval','center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
+    Screen('Flip', scr.win);
+    pause (1)
 
     % Start Trial
 
