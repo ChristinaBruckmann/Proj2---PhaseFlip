@@ -318,29 +318,41 @@ stim.lineWidthPix = 2;
 csLum=0; % luminance cue signal
 circleweak= 0.5; % how weak is the circle compared to mask (lower means less contrast)
 
+% % Load Images
+[JNDimg, JNDColorMap] = imread("JND_illustration.png");
+[intimg, intColorMap] = imread("Interval.png");
+
+% Turn into textures
+JNDimgtex = Screen('MakeTexture', scr.win, JNDimg);
+intimgtex = Screen('MakeTexture', scr.win, intimg);
+
 %% Text Parameters
 text.keyleft="l";
 text.keyright="r";
 
-text.instructions={'During this experiment you will be presented with a  visual stimulus whose orientation you are asked to judge. \n The visual stimulus is an oriented Gabor patch, called the target.\n\n\n\n Continue with the arrow.';
-     'Before the Gabor patch, you will see a grey circle. \n This is called the cue and it indicates that the target is about to be presented. \n\n The target (Gabor patch) will be left or right oriented. \n However, note that a target will not always be presented. No question will be asked, if that is case.'
-     'During the experiment you will also asked to remember an indicated interval.\n The interval refers to the difference in time between the presentation of the first cue and a second cue. \n Within this interval, no target is shown.';
-     'Before the start of the experimental blocks, your threshold will be established. \n This consits in presenting the target at different intensity-levels in order to find the optimal one for you! \n'
-     'Lastly, during the experiment you will get the opportunity to obtain points. \n You will be awarded +1 point for every correct answer. The more points, the better your performance! \n\n And a good performance should be rewarded, right? And so it shall, indeed! \n\n\n\nIf you have understood the task and instructions, you can confirm and continue with the arrow.'};
-text.JND_instructions={'During this task you will be asked to compare two intervals. \n The interval refers to the difference in time between the presentation of two cues.\n The target is not shown during the interval. \n\n\n\n Continue with the arrow.';
-     'The intervals shown to you will be numbered. \n If the first interval is longer, then you must press 1. \n If the second interval is longer, then you must press 2. ';
-     'Please note that it is important you do not move during this task, as any movement will introduce noise in the data. \n\n\n\n If you have understood the task and instructions, you can confirm and continue with the arrow.'};
-text.short_instructions={'The visual stimulus that is presented to you is an oriented Gabor patch. \n This is called the target. \n\n Before the Gabor patch, you will see a grey circle. \n This is called the cue and it indicates that the target is about to be presented.';
-     'The target (Gabor patch) will be left or right oriented. \n Press the left key if the Gabor patch is left-oriented.\n Press the right key if the Gabor patch is right-oriented. \n\n Please note that target will not be shown always! \n When the target is not shown, you do not have to press the left or right key.'};
-text.easypractice_instructions={'Easy Practice. \n\n This is the part where you get to practice discriminating the orientation of the target. \n Remember that if you focus on the upper half of the target, it will be easier to discriminate the orientation. \n Press the left key if the Gabor patch is left-oriented.\n Press the right key if the Gabor patch is right-oriented. \n\n\n\n If you are ready, continue with the arrow.'};
-text.practice_instructions={'Now you get to do a longer practice. \n\n Note that the cue will be shown first. \n The target will be presented after the cue is shown. \n\n Remember that if you focus on the upper half of the target, it will be easier to discriminate the orientation. \n\n\n If you are ready, continue with the arrow.'};
-text.staircase_instructions={'Staircase. \n\n In order for you to achieve optimal performance during the experiment, we will first need to establish what is known as threshold. \n\n\n\n Continue with the arrow.';
-    'The target will be shown to you at different contrast levels. \n This is done in order calculate the best intensity-level for you. \n At times it may be slighlty more difficult to discriminate the target, and the orientation, but\n do not worry because this is by design. \n If you are unsure of the orientation, venture your best guess!';
-    'Please report the perceived orientation by using the left or right key. \n Remember: \n the target will always be shown, \n it is easier to discriminate the orientation if you focus on the upper half of the target. \n\n\n\n If you are ready, continue with the arrow.'};
-text.block1_instructions={'Block 1. \n\n Use the arrows to continue';
-     'Press the left key if the target (Gabor patch) is left-oriented.\n Press the right key if the target is right-oriented. \nWhen the target is not shown, you do not have to press the left or right key'};
-text.block2_instructions={'Block 2.  \n\n Use the arrows to continue';
-    'Press the left key if the target (Gabor patch) is left-oriented.\n Press the right key if the target is right-oriented. \nWhen the target is not shown, you do not have to press the left or right key'};
+text.instructions={'Welcome to the experiment! \n\n In this experiment we will test the limits of your timing skills.\n\n\n\n You can navigate the instructions with the arrows.';
+     'In the first part, we will challenge you to time as precisely as possible.'};
+
+text.JND_instructions1={'Part 1\n\n In this task, you will see two time-intervals.\n\n Your task is to say which one was longer. \n\n\n\n Continue with the arrow.';
+    'Each interval is indicated by two black circles. \n\nPress any button to see what this looks like.\n\nYou do not have to respond yet.';};
+text.JND_instructions2= {'Let`s practice this! \n\n\n\n Press the arrow to start the practice.'};
+text.JND_instructions3= {'Great! \n\n You are ready to start the task. \n\n The task will become progressively more difficult. \n\n If you are not sure which interval was longer, just guess. \n\n\n\n Press the arrow to start the timing task.'};
+text.JND_instructions3={'Well done, you have finished the timing test! \n\n\n\n Please wait for the experimenter.'};
+
+text.maintask_instructions1={'Now, we will start the main part of the experiment. \n\n In the following, you will see only one time-interval, very similar to those you saw before. \n\n\n\n Continue with the arrow.'};
+text.maintask_instructions2={'Instead of a second black circle, we will show you stripes. \n\nYou task is to tell us, whether the stripes were tilted to the left or to the right. \n\nUse the l and r buttons for this.\n\n\n\n Continue with the arrow.' ;
+    'We will now show you what this will look like. \n\n\n\n Continue with arrow.'};
+text.maintask_instructions3={'Let`s practice this! \n\nPay close attention, this is very quick! \n\n\n\n Press the arrow to start the practice.'};
+text.maintask_instructions4={['Great! Now that the task is clear, there are two important things you should know before we start: \n\n 1) The time between the black circle and the stripes is always the same. \n Learn this interval to focus at the right moment!' ...
+    '\n\n2)Sometimes there will be no stripes. In that case, you will not be asked about the direction.\n\n\n\n Continue with arrow.'];
+    'One more thing: \n\n During the experiment you have the opportunity to collect points! \nYou will be awarded +1 point for every correct answer. \n\n And a good performance should be rewarded, right? \n The best 10% will receive a small additional payment!\n\n\n\n Continue with arrow.';
+    'Let`s get started! \n\n Remember to use the repeating timing to focus at the right moment! \n\n\n\n Press the arrow to start the task.'};
+
+% text.block1_instructions={'Part 2. \n\n Use the arrows to continue';
+%      'Press the left key if the target (Gabor patch) is left-oriented.\n Press the right key if the target is right-oriented. \nWhen the target is not shown, you do not have to press the left or right key'};
+text.block2_instructions={'Part 3.  \n\n Use the arrows to continue';
+    'This part is almost identical to the previous one. \n\n The only difference is, that we slightly changed the time interval between the circle and the stripes.\n\n Pay close attention to learn the new interval. \n\n\n\n Start the task with the arrow. '};
+
 %% Create Trial Matrix and Design
 % 300 trials in total (bit less than 45 min at 5,5 seconds per trial)
 % 50 trials per block
@@ -505,6 +517,30 @@ stim.gaborRight=imRright.*gaussEnvt;
 stim.gaborLeft=imRleft.*gaussEnvt;
 % Embedding it in mask happens lower in the script after the intensity has been chosen
 
+% Create Gabor Example and text locations for subtitles
+exgableft=[scr.axisx(2)*0.25, scr.axisy(2)*0.75]; % loc of gabor
+exgabright=[scr.axisx(2)*0.75, scr.axisy(2)*0.75]; % loc of gabor
+gaborRect = [0 0 180 180];
+gaborRectleft = CenterRectOnPointd(gaborRect, exgableft(1),exgableft(2));
+gaborRectright = CenterRectOnPointd(gaborRect, exgabright(1),exgabright(2));
+
+if ~scr.scope
+    exampletargetr = 0.5+0.5*(1*stim.gaborRight);
+    exampletargetl = 0.5+0.5*(1*stim.gaborLeft);
+else
+    exampletargetr = 0.01+0.01*(1*stim.gaborRight);
+    exampletargetl = 0.01+0.01*(1*stim.gaborLef);
+end
+
+exampletargetr = Screen('MakeTexture', scr.win, exampletargetr);
+exampletargetl = Screen('MakeTexture', scr.win, exampletargetl);
+
+[~,~,~,length1]=Screen('TextBounds', scr.win, 'Left'); % get bounds
+[~,~,~,length2]=Screen('TextBounds', scr.win, 'Right'); % get bounds
+textleft=[exgableft(1) round(exgableft(2)+gaborRect(4)*0.6)]; % shift on y axis in relation to gabor
+textright=[exgabright(1) round(exgabright(2)+gaborRect(4)*0.6)]; % shift on y axis in relation to gabor
+textleft(1)= textleft(1)-round(length1*0.5); % Centre text on location on x axis
+textright(1)= textright(1)-round(length2*0.5); % Centre text on location on x axis
 %% Save all parameters and other info
 if ~scr.scope
     if reload_data && subresults.status.last_block>0 % reload previous data
@@ -530,27 +566,40 @@ end
 
          % Introduction
          if ~reload_data
-             starttext='Welcome to the experiment. \n\n Press any button to start.';
              navipage(scr.win, text.instructions) % long instructions
          else
              starttext='Welcome back. \n\n  Press any button to continue.';
+             DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
+             Screen('Flip', scr.win);
+             KbStrokeWait;
          end
-
-         DrawFormattedText(scr.win,starttext, 'center', 'center', scr.fontcolour);
-         Screen('Flip', scr.win);
-         KbStrokeWait;
 
          %% Run JND Task
          if ~ subresults.status.JND_done
              while JND_task
-%                  io64(triggerPort, triggerPortAddress, 254); % Start recording
-%                  WaitSecs(0.1)
-%                  io64(triggerPort, triggerPortAddress, 0);
+
+                % JND Introduction and Practice
+                navipage(scr.win,text.JND_instructions1) % Show instructions part 1
+                Screen('DrawTexture', scr.win, JNDimgtex);% show illustration
+                Screen('Flip', scr.win);
+                KbStrokeWait;
+                navipage(scr.win,text.JND_instructions2) % Show instructions part 2
+                
+                % Practice JND
+                
+                navipage(scr.win,text.JND_instructions3) % Show instructions part 3
+
+                % Main JND Task
+
+                %                  io64(triggerPort, triggerPortAddress, 254); % Start recording
+                %                  WaitSecs(0.1)
+                %                  io64(triggerPort, triggerPortAddress, 0);
+
                  DrawFormattedText(scr.win,'Loading.', 'center', 'center', scr.fontcolour);
                  Screen('Flip', scr.win);
                  pause(3)
 
-                 [JND, JND_results]=JNDfunction(scr,time,text.JND_instructions,stim);
+                 [JND, JND_results]=JNDfunction(scr,time,stim);
                  % Plot results and flip to screen
                  Screen('Flip', scr.win);
                  JND_fig = figure('Visible', 'off'); % make invisible figure
@@ -599,7 +648,15 @@ end
          end
 
          while practice && ~subresults.status.practice_done
-             navipage(scr.win,text.easypractice_instructions) % Show instructions
+
+             navipage(scr.win,text.maintask_instructions1) % Show instructions
+             Screen('DrawTexture', scr.win, exampletargetr, [], gaborRectright);
+             Screen('DrawTexture', scr.win, exampletargetl, [], gaborRectleft);
+             DrawFormattedText(scr.win, 'Right', textleft(1),textleft(2),scr.fontcolour);
+             DrawFormattedText(scr.win, 'Left', textright(1),textright(2),scr.fontcolour);
+             navipage(scr.win,text.maintask_instructions2) 
+             navipage(scr.win,text.maintask_instructions3)
+
              % Easy Practice
              while easypractice
                  [~, RespEval, ~, ~]=trialfunction(scr,time,text,stim,practicegabor,[6, time.practiceinterval],speedrun);
@@ -622,7 +679,8 @@ end
                          case 1
                              break % get out of the true loop and run another easy practice
                          case 2
-                             navipage(scr.win,text.short_instructions) % show instructions
+                             navipage(scr.win,text.maintask_instructions1) % show instructions
+                             navipage(scr.win,text.maintask_instructions4) % show instructions
                              continue % then show the menu again
                          case 3
                              practicegabor=adjustintensity(scr,practicegabor); % adjust intensity
@@ -644,7 +702,7 @@ end
          else
              tottrialcount=1; % total trial counter
              subresults.status.total_points=0;
-             navipage(scr.win,text.block1_instructions) % Show instructions for first block
+             navipage(scr.win,text.maintask_instructions4) % Show instructions for first block
          end
 
          % Run blocks
@@ -813,7 +871,7 @@ end
              else
                  next_block=0; % continue with next block?
                  while ~next_block
-                     scoretext=sprintf('End of block %i/%i  \n\n Points in this block: %i \n\n Total score: %i ',b,nblocks,block_points, subresults.status.total_points);
+                     scoretext=sprintf('End of part %i/%i  \n\n Points in this part: %i \n\n Total score: %i ',b+1,nblocks+1,block_points, subresults.status.total_points);
                      DrawFormattedText(scr.win,scoretext, 'center', 'center', scr.fontcolour);
                      Screen('Flip', scr.win);
                      pause(2.5)
@@ -827,6 +885,7 @@ end
                      [~, keyNamethr, ~]=KbStrokeWait;
                      % Exit?
                      if KbName(keyNamethr)=="space"
+                         navipage(scr.win,text.block2_instructions) 
                          next_block=1;
                      elseif KbName(keyNamethr)=="e"
                          DrawFormattedText(scr.win,'Continue(c)? Exit(e)?', 'center', 'center',scr.fontcolour);
@@ -1228,9 +1287,7 @@ end
 % Make sure to jitter the scr.background noise so that the longer interval is not obvious by noise alone.
 % Maybe remove backfground noise?
 
-function [JND,JND_results]=JNDfunction(scr,time,instr,stim)
-
-navipage(scr.win,instr) % Show instructions
+function [JND,JND_results]=JNDfunction(scr,time,stim)
 
 % Parameters
 comparison_length=2; % start value for comparison interval length in s
