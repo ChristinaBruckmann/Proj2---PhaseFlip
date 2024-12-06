@@ -1,8 +1,9 @@
 %% Single Subject EEG Alpha Phase Analysis (Phase Flip)
+% Basic Alpha Analysis, provides the base for all other alpha codes of this project. Needs to be run for each participant before other analyses can be done.
 clear
 clc
 
-subj=2; % vector with multiple subjects also works
+subj=3; % vector with multiple subjects also works
 noisy_nose=[]; % subjects from subj with a noisy nose (which should be referenced to mastoids instead)
 
 % Segmentation Parameters

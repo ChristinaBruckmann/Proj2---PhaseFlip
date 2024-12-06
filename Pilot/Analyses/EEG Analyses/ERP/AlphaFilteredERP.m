@@ -2,7 +2,7 @@
 clear
 clc
 
-subj=[1 2];
+subj=[1 2 3];
 alpha_range=[8 12]; % upper and lower bound of frequency range
 elec=[25:30 62:64]; % occipital electrodes
 
@@ -55,8 +55,6 @@ for s=1:length(subj)
         end
     end
 end
-
-
 % Select and average across electrodes
 Alpha_ERP_target=mean(Alpha_ERP_target(:,:,:,elec),4);
 Alpha_ERP_catch=mean(Alpha_ERP_catch(:,:,:,elec),4);
@@ -91,6 +89,4 @@ for  t=1:2 % two target types (target and catch)
     legend("800","850")
     box('off')
 end
-
-
 

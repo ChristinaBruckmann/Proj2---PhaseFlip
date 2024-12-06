@@ -1,7 +1,7 @@
 %% Phase Flip Analysis Pipeline
 clear 
 clc
-subj=2;
+subj=1;
 
 % Load
 cd 'Y:\el-Christina\PhaseFlip\PF_Pilot\Raw Data\Raw Behaviour'

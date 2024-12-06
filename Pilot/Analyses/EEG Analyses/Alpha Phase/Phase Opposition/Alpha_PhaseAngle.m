@@ -4,10 +4,10 @@
 
 clear
 clc
-subj=[1 2];
+subj=[3];
 elec=[25:30 62:64]; % occipital electrodes
 timepoint=[800];
-exclude_t=20; % how many trials excluded at the begining, so that learning effects can be minimized? (this currently happens after art rejection, so rejected trials are not equal across cond and subj, fix this!)
+exclude_t=1; % how many trials excluded at the begining, so that learning effects can be minimized? (this currently happens after art rejection, so rejected trials are not equal across cond and subj, fix this!)
 
 % Load Data
 cd  'Y:\el-Christina\PhaseFlip\PF_Pilot\Results\Alpha Phase'
@@ -30,8 +30,8 @@ for s=1:length(subj)
     cond1_angles=Alpha_SingleTrials{1,1};
     cond2_angles=Alpha_SingleTrials{1,2};
 
-    cond1_angles=squeeze(mean(cond1_angles(:,elec,:),2));
-    cond2_angles=squeeze(mean(cond2_angles(:,elec,:),2));
+    cond1_angles=squeeze(circ_mean(cond1_angles(:,elec,:),[],2));
+    cond2_angles=squeeze(circ_mean(cond2_angles(:,elec,:),[],2));
 
     % Select time point
     timeVec=ITPCalpha_timevec{1,1};
@@ -72,7 +72,7 @@ circ_plot(cond2_angles,'pretty','ro',true,'linewidth',2,'color','r'),
 % Load Data
 clear
 clc
-subj=[1 2];
+subj=[3];
 elec=[25:30 62:64]; % occipital electrodes
 cd  'Y:\el-Christina\PhaseFlip\PF_Pilot\Results\Alpha Phase'
 for s=1:length(subj)
