@@ -1,7 +1,7 @@
 %% Phase Flip Analysis Pipeline
 clear 
 clc
-subj=1;
+subj=5;
 
 % Load
 cd 'Y:\el-Christina\PhaseFlip\PF_Pilot\Raw Data\Raw Behaviour'
@@ -10,13 +10,14 @@ load(loadfilename)
 
 %% JND Task
 figure;
- plot(1:length(subresults.JND_results.Comparison), subresults.JND_results.Comparison, '-o', 'LineWidth', 2); 
- xlim([1 length(subresults.JND_results.Comparison)]); 
- ylim([min(subresults.JND_results.Comparison)-1 max(subresults.JND_results.Comparison)+1]); 
- title('JND Results'); 
- xlabel('Trial Number'); 
- ylabel('Comparison Duration'); 
- yline(subresults.JND);
+JND=mean(subresults.JND_UD.x(end-10:end));
+plot(1:length(subresults.JND_results.Comparison), subresults.JND_results.Comparison, '-o', 'LineWidth', 2);
+xlim([1 length(subresults.JND_results.Comparison)]);
+ylim([min(subresults.JND_results.Comparison)-1 max(subresults.JND_results.Comparison)+1]);
+title(sprintf('JND Results (JND: %.3f)',JND));
+xlabel('Trial Number');
+ylabel('Comparison Duration');
+yline(JND);
 
 %% Gabor intensity progression for each condition separately
 gabor_cond1=subresults.data{subresults.data{:,'Condition'}==1,'Gabor Strength'};

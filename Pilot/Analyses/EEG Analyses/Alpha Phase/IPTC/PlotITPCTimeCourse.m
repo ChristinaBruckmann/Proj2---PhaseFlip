@@ -2,7 +2,7 @@
 
 clear
 clc
-subj=[3];
+subj=[5];
 elec=[25:30 62:64]; % occipital electrodes
 bl=1; % baseline to theoretical ITPC?
 

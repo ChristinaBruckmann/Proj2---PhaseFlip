@@ -2,7 +2,7 @@
 clear
 clc
 
-subj=[1];
+subj=[5];
 elec=[25:30 62:64]; % occipital electrodes
 
 % Segmentation Parameters

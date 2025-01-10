@@ -3,8 +3,8 @@
 clear
 clc
 
-subj=3; % vector with multiple subjects also works
-noisy_nose=[]; % subjects from subj with a noisy nose (which should be referenced to mastoids instead)
+subj=5; % vector with multiple subjects also works
+noisy_nose=[5]; % subjects from subj with a noisy nose (which should be referenced to mastoids instead)
 
 % Segmentation Parameters
 triggercodes_target={110;210}; % trigger codes for target trials (at regular time points) - currently cue-codes for each condition

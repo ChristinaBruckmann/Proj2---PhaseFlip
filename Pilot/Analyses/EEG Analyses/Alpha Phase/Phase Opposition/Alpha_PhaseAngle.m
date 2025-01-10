@@ -4,7 +4,7 @@
 
 clear
 clc
-subj=[3];
+subj=[5];
 elec=[25:30 62:64]; % occipital electrodes
 timepoint=[800];
 exclude_t=1; % how many trials excluded at the begining, so that learning effects can be minimized? (this currently happens after art rejection, so rejected trials are not equal across cond and subj, fix this!)

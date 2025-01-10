@@ -2,7 +2,7 @@
 clear
 clc
 
-subj=[1 2 3];
+subj=[1 2 3 4 5];
 alpha_range=[8 12]; % upper and lower bound of frequency range
 elec=[25:30 62:64]; % occipital electrodes
 
