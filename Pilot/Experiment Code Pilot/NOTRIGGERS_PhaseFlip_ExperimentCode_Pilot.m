@@ -1,4 +1,4 @@
-%% Experiment Code Project 2 - Phase Flip
+%% Exlperieement Code Project 2 - Phase Flip
 
 % Requires the custom functions PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m, as well as palamedes toolbox
 
@@ -40,6 +40,8 @@ while ~ input_complete
             gamification=1; % let participant collect points?
             scr.scope=0; % run scope test?
             reminders=1; % Show reminder intervals?
+            scr.trigtest=0;
+
 
             % Experiment Sections
             JND_task=1; % JND Task?
@@ -68,6 +70,7 @@ while ~ input_complete
                 % Check if a file for this participant already exists
                 savefilename=sprintf("Pilot_PhaseFlip_Subj%i",subresults.subj_num);
                 try
+                    cd 'C:\Experiments\Christina\PhaseFlip\Pilot\FP_Data'
                     load(savefilename) % Try to load a file with this name, if it exists ask if this should be used
                     answer = questdlg('Subject already exists. Continue?','Existing Subject', 'Yes','No, change number.','No, change number.');
                     switch answer
@@ -129,7 +132,9 @@ while ~ input_complete
 
             input_complete=1;
         case 2 % Trigger Check
-            % Jumps directly to the real experiment to test a trial, this skips JND, Staircase and Practice
+            % Runs individual trials like scope test but without changing
+            % the graphics
+            scr.trigtest=1;
             floatwin=0;
             SkipSync=0;
             stim.reducetrials=1;
@@ -152,6 +157,7 @@ while ~ input_complete
             scr.scope=1;
             gamification=0;
             reminders=0; % Show reminder intervals?
+            scr.trigtest=0;
 
             input_complete=1;
         case 4 % Debugging
@@ -192,6 +198,7 @@ while ~ input_complete
             scr.scope=0;
             input_complete=1;
             subresults.subj_num=9999;
+            scr.trigtest=0;
     end
 end
 
@@ -306,13 +313,6 @@ numCycles = 21; % keep an odd number?
 degrees=pi/180; % units
 theta=45*degrees; % tilt
 
-% Fixation Cross
-fixCrossDimPix = 10;
-xCoords = [-fixCrossDimPix fixCrossDimPix 0 0];
-yCoords = [0 0 -fixCrossDimPix fixCrossDimPix];
-stim.fixCoords = [xCoords; yCoords];
-stim.lineWidthPix = 2;
-
 % Cue Parameters
 csLum=0; % luminance cue signal
 circleweak= 0.5; % how weak is the circle compared to mask (lower means less contrast)
@@ -338,11 +338,12 @@ text.JND_instructions2= {'Let`s practice this! \n\n\n\n Press the arrow to start
 text.JND_instructions3= {'Great! \n\n You are ready to start the task. \n\n The task will become progressively more difficult. \n\n If you are not sure which interval was longer, just guess. \n\n\n\n Press the arrow to start the timing task.'};
 text.JND_instructions4={'Well done, you have finished the timing test! \n\n\n\n Please wait for the experimenter.'};
 
-text.maintask_instructions1={'Part 2 \n\n Now, we will start the main part of the experiment. \n\n In the following, you will see only one time-interval, very similar to those you saw before. \n\n\n\n Continue with the arrow.'};
-text.maintask_instructions2={'Instead of a second black circle, we will show you stripes. \n\nYou task is to tell us, whether the stripes were tilted to the left or to the right. \n\nUse the l and r buttons for this.\n\n\n\n Continue with the arrow.' ;
-    'We will now show you what this will look like. \n\n\n\n Continue with arrow.'};
-text.maintask_instructions3={'Let`s practice this! \n\nPay close attention, this is very quick! \n\n\n\n Press the arrow to start the practice.'};
-text.maintask_instructions4={['Great! Now that the task is clear, there are some important things you should know before we start: \n\n 1) The time between the black circle and the stripes is always the same. \n Learn this interval to focus at the right moment!\n This will help you see the target.' ...
+% These need to be one page each due to the way they are presented (not using navipage.m)
+text.maintask_instructions1='Part 2 \n\n Now, we will start the main part of the experiment. \n\n In the following, you will see only one time-interval, very similar to those you saw before. \n\n\n\n Continue with the arrow.';
+text.maintask_instructions2='Instead of a second black circle, we will show you stripes. \n\nYou task is to tell us, whether the stripes were tilted to the left or to the right. \n\nUse the l and r buttons for this.\n\n\n\n Continue with the arrow.' ;
+text.maintask_instructions3='We will now show you what this will look like. \n\n\n\n Continue with arrow.';
+text.maintask_instructions4='Let`s practice this! \n\nPay close attention, this is very quick! \n\n\n\n Press the arrow to start the practice.';
+text.maintask_instructions5={['Great! Now that the task is clear, there are some important things you should know before we start: \n\n 1) The time between the black circle and the stripes is always the same. \n Learn this interval to focus at the right moment!\n This will help you see the target.' ...
     '\n\nWe will occasionally remind you of this interval!\n\n\n\n Continue with arrow.'];
     'One more thing: \n\n During the experiment you have the opportunity to collect points! \nYou will be awarded +1 point for every correct answer. \n\n And a good performance should be rewarded, right? \n The best 10% will receive a small additional payment!\n\n\n\n Continue with arrow.';
     'Let`s start with some easy targets! \n\n Remember to use the repeating timing to focus at the right moment! \n\n\n\n Press the arrow to start the task.'};
@@ -536,7 +537,7 @@ if ~scr.scope
     exampletargetl = 0.5+0.5*(1*stim.gaborLeft);
 else
     exampletargetr = 0.01+0.01*(1*stim.gaborRight);
-    exampletargetl = 0.01+0.01*(1*stim.gaborLef);
+    exampletargetl = 0.01+0.01*(1*stim.gaborLeft);
 end
 
 exampletargetr = Screen('MakeTexture', scr.win, exampletargetr);
@@ -548,6 +549,13 @@ textleft=[exgableft(1) round(exgableft(2)+gaborRect(4)*0.6)]; % shift on y axis 
 textright=[exgabright(1) round(exgabright(2)+gaborRect(4)*0.6)]; % shift on y axis in relation to gabor
 textleft(1)= textleft(1)-round(length1*0.5); % Centre text on location on x axis
 textright(1)= textright(1)-round(length2*0.5); % Centre text on location on x axis
+
+% Fixation Cross
+fixCrossDimPix = 10;
+xCoords = [-fixCrossDimPix fixCrossDimPix 0 0];
+yCoords = [0 0 -fixCrossDimPix fixCrossDimPix];
+stim.fixCoords = [xCoords; yCoords];
+stim.lineWidthPix = 2;
 %% Save all parameters and other info
 if ~scr.scope
     if reload_data && subresults.status.last_block>0 % reload previous maint task data if blocks have been done
@@ -566,7 +574,7 @@ if ~scr.scope
     startblock=subresults.status.last_block+1;
 end
 %% Run Experiment
-if ~scr.scope
+if ~(scr.scope || scr.trigtest)
     try
 
         ListenChar(2); % Suppress key presses in command window
@@ -645,8 +653,10 @@ if ~scr.scope
 %                 io64(scr.triggerPort, scr.triggerPortAddress, 0);
 
                 % Save results
+                cd 'C:\Experiments\Christina\PhaseFlip\Pilot\FP_Data'
                 subresults.JND_results=JND_results;
                 subresults.JND_UD=JND_UD;
+                subresults.status.JND_done=1;
                 save(savefilename, 'subresults')
 
                 % Calculate JND
@@ -654,17 +664,13 @@ if ~scr.scope
 
                 % Display end of JND message (wait for experimenter)
                 navipage(scr.win,text.JND_instructions4)
-
-                % Plot results and flip to screen
-                t = 1:length(JND_UD.x); 
-                JND_fig = figure('Visible', 'off'); % make invisible figure
-                plot(t,JND_UD.x,'k'); hold on; plot(t(JND_UD.response == 1),JND_UD.x(JND_UD.response == 1),'ko', 'MarkerFaceColor','k'); plot(t(JND_UD.response == 0),JND_UD.x(JND_UD.response == 0),'ko', 'MarkerFaceColor','w'); set(gca,'FontSize',16); axis([0 max(t)+1 min(JND_UD.x)-(max(JND_UD.x)-min(JND_UD.x))/10 max(JND_UD.x)+(max(JND_UD.x)-min(JND_UD.x))/10]);
-                JND_label=sprintf("JND=%.2f",JND); yline(JND); title(JND_label); xlabel('Trial'); ylabel('Stimulus Intensity'); 
-                PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
-                Screen('Flip', scr.win);
-                pause(3)
-
-
+%                 % Plot results and flip to screen
+%                 t = 1:length(JND_UD.x); 
+%                 JND_fig = figure('Visible', 'off'); % make invisible figure
+%                 plot(t,JND_UD.x,'k'); hold on; plot(t(JND_UD.response == 1),JND_UD.x(JND_UD.response == 1),'ko', 'MarkerFaceColor','k'); plot(t(JND_UD.response == 0),JND_UD.x(JND_UD.response == 0),'ko', 'MarkerFaceColor','w'); set(gca,'FontSize',16); axis([0 max(t)+1 min(JND_UD.x)-(max(JND_UD.x)-min(JND_UD.x))/10 max(JND_UD.x)+(max(JND_UD.x)-min(JND_UD.x))/10]);
+%                 JND_label=sprintf("JND=%.2f",JND); yline(JND); title(JND_label); xlabel('Trial'); ylabel('Stimulus Intensity'); 
+%                 PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
+%                 Screen('Flip', scr.win);
                 unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
 
                 % Confirm or repeat
@@ -703,17 +709,45 @@ if ~scr.scope
         end
 
         while practice && ~subresults.status.practice_done
+            page=1;
+            while 1 % a bit complicated to also allow navigation through the slide with the example gabors
+                if page==1
+                    DrawFormattedText(scr.win,text.maintask_instructions1, 'center', 'center', scr.fontcolour);
+                    Screen('Flip', scr.win);
+                elseif page ==2
+                    % Show instructions with gabor images
+                    Screen('DrawTexture', scr.win, exampletargetr, [], gaborRectright);
+                    Screen('DrawTexture', scr.win, exampletargetl, [], gaborRectleft);
+                    DrawFormattedText(scr.win, 'Left', textleft(1),textleft(2),scr.fontcolour);
+                    DrawFormattedText(scr.win, 'Right', textright(1),textright(2),scr.fontcolour);
+                    DrawFormattedText(scr.win,text.maintask_instructions2, 'center', 'center', scr.fontcolour);
+                    Screen('Flip', scr.win);
+                elseif page==3
+                    DrawFormattedText(scr.win,text.maintask_instructions3, 'center', 'center', scr.fontcolour);
+                    Screen('Flip', scr.win);
+                elseif page==4
+                    Screen('DrawTexture', scr.win, intimgtex);% show illustration
+                    Screen('Flip', scr.win);
+                elseif page==5
+                    DrawFormattedText(scr.win,text.maintask_instructions4, 'center', 'center', scr.fontcolour);
+                    Screen('Flip', scr.win);
+                end
 
-            navipage(scr.win,text.maintask_instructions1) % Show instructions
-            Screen('DrawTexture', scr.win, exampletargetr, [], gaborRectright);
-            Screen('DrawTexture', scr.win, exampletargetl, [], gaborRectleft);
-            DrawFormattedText(scr.win, 'Left', textleft(1),textleft(2),scr.fontcolour);
-            DrawFormattedText(scr.win, 'Right', textright(1),textright(2),scr.fontcolour);
-            navipage(scr.win,text.maintask_instructions2)
-            Screen('DrawTexture', scr.win, intimgtex);% show illustration
-            Screen('Flip', scr.win);
-            KbStrokeWait;
-            navipage(scr.win,text.maintask_instructions3)
+                % Press forward or backwards
+                [~, keyNamethr, ~]=KbStrokeWait;
+                if strcmp(KbName(keyNamethr),"LeftArrow")==1 % previous page
+                    if ~(page==1) % only go back if this is not the last page
+                    page=page-1;
+                    end
+                elseif strcmp(KbName(keyNamethr),"RightArrow")==1 % next page
+                    if page==5 % if last page
+                        break
+                    else 
+                        page=page+1;
+                    end
+                end
+            end
+
 
             % Easy Practice
             while easypractice
@@ -757,10 +791,13 @@ if ~scr.scope
         % Reload data or initiate
         if reload_data
             tottrialcount=subresults.status.last_block*ntrials+1; % start at first trial of next block
+            if subresults.status.last_block==0
+                navipage(scr.win,text.maintask_instructions4) % Show instructions for first block
+            end
         else
             tottrialcount=1; % total trial counter
             subresults.status.total_points=0;
-            navipage(scr.win,text.maintask_instructions4) % Show instructions for first block
+            navipage(scr.win,text.maintask_instructions5) % Show instructions for first block
         end
 
         % Run blocks
@@ -937,7 +974,7 @@ if ~scr.scope
                     DrawFormattedText(scr.win,scoretext, 'center', 'center', scr.fontcolour);
                     Screen('Flip', scr.win);
                     pause(3)
-                    blockendmessage=sprintf('Please take a break. \n\n \n\nPress the space bar to continue with the next block.');
+                    blockendmessage=sprintf('Please take a break. \n\n \n\nPress any button to continue with the next block.');
                     DrawFormattedText(scr.win,blockendmessage, 'center', 'center', scr.fontcolour);
                     % Print performance
                     performancetext=sprintf('B%.2f24753 /n T%.2f45264', accuracy(1),accuracy(2)); % block and total
@@ -973,7 +1010,8 @@ if ~scr.scope
         ShowCursor;
         psychrethrow(psychlasterror);
     end
-else
+elseif scr.scope
+    try
     %% Scope Test
     scopedone=0;
 
@@ -1020,6 +1058,41 @@ else
         % Run trial function
         trialfunction(scr,time,text,stim,gaborpercent,[99,scope_dur,3],0); % Run trial
 
+    end
+    catch
+        ListenChar(0); % Restore default input handling
+        sca;
+        ShowCursor;
+        psychrethrow(psychlasterror);
+    end
+else
+    %% Trigger check
+    try
+    trigcheck=1;
+
+    while trigcheck
+        DrawFormattedText(scr.win, 'Trigger check \n\n\n\nPress any button to run a trial. \n\n Exit with e.','center','center',scr.fontcolour)
+        Screen('Flip',scr.win);
+        [keyDown,~,keyName]=KbCheck;
+        if keyDown
+            if strcmp(KbName(keyName),'e')==1 %exit with e
+                ListenChar(0); % Restore default input handling
+                trigcheck=1;
+                sca
+                return
+            else
+                % Run trial function
+                trialfunction(scr,time,text,stim,gaborpercent,[1,0.7,2],0); % Run trial
+                pause (0.1) %otherwise messes with KbCheck above
+            end
+        end
+
+    end
+    catch
+        ListenChar(0); % Restore default input handling
+        sca;
+        ShowCursor;
+        psychrethrow(psychlasterror);
     end
 end
 %% Trial Function
@@ -1085,7 +1158,7 @@ end
 
 % Choose correct triggers for condition, trial type and orientation trvec=[CueOnset,TargetOnset]
     if scr.scope
-        trvec=1;
+        trvec=[1 1];
     else
         % Which condition
         switch trialinfoin(3)
@@ -1361,10 +1434,8 @@ maxreversals=18;
 else % reduced trial N when testing the code
     maxreversals=5;
 end
-avg_trials=5; % average across how many of the last trials to calculate JND?
 
 % Initialize
-jndfound=0;
 JND_results=table(); %preallocate results
 currtrial=0;
 
@@ -1438,7 +1509,7 @@ while ~UD.stop
             %             end
         end
 
-        for fixidx=1:interval_lengths(intervals)
+        for intidx=1:interval_lengths(intervals)
             Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
             DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
@@ -1458,7 +1529,7 @@ while ~UD.stop
         end
 
         % Fixation
-        for fixidx=1:time.JNDpostintmask(intervals+1)
+        for maskidx=1:time.JNDpostintmask(intervals+1)
             Screen('DrawTexture', scr.win, noisetex(cnoise), [], [], 0);
             DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
@@ -1468,6 +1539,8 @@ while ~UD.stop
         % Blank screen to mark end of interval
         for fixidx=1:time.III_JND(intervals+1)
             Screen('Flip', scr.win);
+            Screen('DrawLines', scr.win, stim.fixCoords,...
+            stim.lineWidthPix, scr.black, [scr.xCenter sc.yCenter], 2);
         end
     end
 

@@ -3,8 +3,8 @@
 clear
 clc
 
-subj=5; % vector with multiple subjects also works
-noisy_nose=[5]; % subjects from subj with a noisy nose (which should be referenced to mastoids instead)
+subj=9; % vector with multiple subjects also works
+noisy_nose=[9]; % subjects from subj with a noisy nose (which should be referenced to mastoids instead)
 
 % Segmentation Parameters
 triggercodes_target={110;210}; % trigger codes for target trials (at regular time points) - currently cue-codes for each condition
@@ -43,7 +43,7 @@ for s=1:length(subj)
     % Re-Reference for different clusters
     if ismember(subj(s),noisy_ref) % has a noisy nose, always refernce to mastoids
         data_occ=referenceContEEGdata(SDATA.data,[69 71]);
-        fprintf("Subject %i referenced to mastoids.",subj(s))
+        fprintf("Subject %i referenced to mastoids.\n",subj(s))
     else
         data_occ=referenceContEEGdata(SDATA.data,71); %nose
     end

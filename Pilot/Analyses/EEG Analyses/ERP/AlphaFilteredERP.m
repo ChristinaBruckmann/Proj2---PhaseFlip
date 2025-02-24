@@ -2,9 +2,10 @@
 clear
 clc
 
-subj=[1 2 3 4 5];
+subj=[9];
 alpha_range=[8 12]; % upper and lower bound of frequency range
 elec=[25:30 62:64]; % occipital electrodes
+noseref=0; % rereference all the data to the nose?
 
 % Segmentation Parameters
 trigcodes_target={110;210}; % trigger codes for target trials (at regular time points) - currently cue-codes for each condition
@@ -22,6 +23,11 @@ for s=1:length(subj)
     artifacts=SDATA.metadata.artifacts;
     triggers=SDATA.events.triggerChannel;
     srate=SDATA.info.sampling_rate;
+
+    % Re-reference to the nose?
+    if noseref
+
+    end
 
     % Filter
     [alpha_whole_ts] = bandPassFilter(alpha_range(1),alpha_range(2),all_data,srate); % filter around alpha range
@@ -71,7 +77,9 @@ alpha_data(2,:,:)=Alpha_ERP_catch;
 colourvec=[0.4940 0.1840 0.5560 1;
     0.4660 0.6740 0.1880 1];
 
-figure;tiledlayout('flow');
+
+maintitle=sprintf("Subject %i",subj);
+figure;tiledlayout('flow');title('Valid Target')
 for  t=1:2 % two target types (target and catch)
     nexttile;
     for c=1:2 % two timing conditions (800 and 850)

@@ -157,7 +157,6 @@ while ~ input_complete
             scr.scope=1;
             gamification=0;
             reminders=0; % Show reminder intervals?
-            scr.trigtest=0;
 
             input_complete=1;
         case 4 % Debugging
@@ -198,7 +197,6 @@ while ~ input_complete
             scr.scope=0;
             input_complete=1;
             subresults.subj_num=9999;
-            scr.trigtest=0;
     end
 end
 
@@ -666,7 +664,7 @@ if ~(scr.scope || scr.trigtest)
                 DrawFormattedText(scr.win,text.JND_instructions4, 'center', 'center', scr.fontcolour);
                 Screen('Flip', scr.win);
                 KbStrokeWait;
-
+    
                 % Plot results and flip to screen
                 t = 1:length(JND_UD.x); 
                 JND_fig = figure('Visible', 'off'); % make invisible figure
