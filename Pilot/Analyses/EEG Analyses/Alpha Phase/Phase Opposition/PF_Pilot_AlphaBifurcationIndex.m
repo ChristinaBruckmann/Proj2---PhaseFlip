@@ -1,4 +1,8 @@
 %% Calculates the Bifurcation Index for each frequency and time point between the 800 and 850 conditions.
+% According to van Rullen 2016 and Busch 2009
+% PBI = (ITCa − ITC_all)(ITCb − ITC_all)
+clear
+clc
 
 % Settings
 subj=[1:9];
@@ -9,8 +13,8 @@ trialtype=[1 2]; % 1 - target trials, 2 - catch trials, 1 2 plot both separately
 % Optional Cleaning
 after_reminder=0; % only trials immediately after reminder interval
 threshold_only=1; % only trials with a contrast around the participants threshold (irrelevant for catch)
-after_learning=0; % only trials after the initial 10 trials of main experiment (first 20 practice trials are excluded anyway)
-correct_only=0; % only trials with correct responses (irrelevant for catch)
+after_learning=1; % only trials after the initial 10 trials of main experiment (first 20 practice trials are excluded anyway)
+correct_only=1; % only trials with correct responses (irrelevant for catch)
 
 for s=1:length(subj)
     % Load Data
@@ -110,7 +114,7 @@ for s=1:length(subj)
             if c==1
                 GL_TF_Phase{s,trialtype(t)}=mean_data;
             elseif c==2
-                GL_TF_Phase{1, trialtype(t)+c}=mean_data;
+                GL_TF_Phase{s, trialtype(t)+c}=mean_data;
             end
         end
     end
@@ -118,8 +122,90 @@ end
 
 % Save GL File
 cd 'Y:\el-Christina\PhaseFlip\PF_Pilot\Results\Bifurcation'
-save('GL_TF_Phase','GL_TF_Phase')
-% Calculate overall ITC (sum across trials: (angle / amplitude) then divide by number of trials)
-%ITC_all=
+save('GL_TF_Phase','GL_TF_Phase','timeVec','after_reminder','threshold_only','correct_only','after_reminder')
 
-           
+
+%% Calculate overall ITC (sum across trials: (angle / amplitude) then divide by number of trials)
+
+for s=1:size(GL_TF_Phase,1) % For each subject
+
+    f=figure; tiledlayout('flow');
+    %title(f,sprintf('Subject %i',s))
+
+    for t=1:(size(GL_TF_Phase,2)/2) % for trialtype (target and catch)
+
+        % Select Data for subj x condition x trialtype
+        data800=GL_TF_Phase{s,t};
+        data850=GL_TF_Phase{s, t+2};
+
+        % Calculate Phase Opposition Values
+        [p_circWW, p_POS, p_zPOS]=PhaseOpposition(data800, data850);
+
+        % Plot
+         nexttile;
+         imagesc(p_circWW');
+         colorbar;
+
+         nexttile;
+         imagesc(p_POS');
+         colorbar;
+
+         nexttile;
+         imagesc(p_zPOS');
+         colorbar;
+
+        % Save
+        subj_res(1,:,:)=p_circWW;
+        subj_res(2,:,:)=p_POS;
+        subj_res(3,:,:)=p_zPOS;
+        GL_PhaseOppositionResults(s,t,:,:,:)=subj_res; % subject x trial type (target or catch) x type of analysis (circWW,POS,zPOS) x time points x frequencies
+    end
+end
+
+% Save
+cd 'Y:\el-Christina\PhaseFlip\PF_Pilot\Results\Bifurcation'
+save('GL_PhaseOppositionIdx','GL_PhaseOppositionResults','timeVec','after_reminder','threshold_only','correct_only','after_reminder')
+
+%% Group Level Plot
+% Average across subjects
+GL_POR_mean=squeeze(mean(GL_PhaseOppositionResults,1));  % trial type x analysis x time points x frequencies
+f=figure; tiledlayout('flow');
+
+for t=1:size(GL_POR_mean,1) % for trialtype (target and catch)
+    % Plot
+    nexttile;
+    imagesc(timeVec, 1:30, squeeze(GL_POR_mean(t,1,:,:))'); axis xy; 
+    colorbar;
+    xline(0)
+    xline(800)
+    xline(850)
+    if t==1
+        title("Target Trials - circ WW")
+    else
+        title("Catch Trials - circ WW")
+    end
+
+    nexttile;
+    imagesc(timeVec, 1:30, squeeze(GL_POR_mean(t,2,:,:))'); axis xy; 
+    colorbar;
+    xline(0)
+    xline(800)
+    xline(850)
+     if t==1
+        title("Target Trials - Phase Opposition Sum")
+    else
+        title("Catch Trials - Phase Opposition Sum")
+    end
+
+    nexttile;
+    imagesc(timeVec, 1:30, squeeze(GL_POR_mean(t,3,:,:))'); axis xy; 
+    colorbar;
+    xline(0)
+    xline(800)
+    xline(850)
+     if t==1
+        title("Target Trials - z-scored POS")
+    else
+        title("Catch Trials - z-scored POS")
+    end
+end

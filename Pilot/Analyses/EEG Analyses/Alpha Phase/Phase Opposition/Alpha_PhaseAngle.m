@@ -102,7 +102,7 @@ if gl_plots
     nexttile;circ_plot(GL_cond2_catch,'hist',[],30,true,true,'linewidth',3,'color','r')
     title("Catch Trials 850")
 end
-%% Plot TIme Course of phase angles
+%% Plot Time Course of phase angles
 if timecourse
     % Load Data
     elec=[25:30 62:64]; % occipital electrodes

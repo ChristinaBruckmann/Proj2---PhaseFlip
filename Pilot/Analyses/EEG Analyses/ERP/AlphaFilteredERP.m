@@ -2,7 +2,7 @@
 clear
 clc
 
-subj=[9];
+subj=[1:9];
 alpha_range=[8 12]; % upper and lower bound of frequency range
 elec=[25:30 62:64]; % occipital electrodes
 noseref=0; % rereference all the data to the nose?
