@@ -83,154 +83,27 @@ end
 Alpha_ERP_target=mean(Alpha_ERP_target(:,:,:,elec),4);
 Alpha_ERP_catch=mean(Alpha_ERP_catch(:,:,:,elec),4);
 
-for s=1:length(subj)
-    figure; t=tiledlayout('flow');
-    maintit=sprintf("Subject %i",subj(s));
-    title(t,maintit)
-    nexttile;
-    title("Target Trials")
-    plot(1:size(anglediff,3),squeeze(anglediff(s,1,:)))
-    hold on
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_target(s,1,:)))
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_target(s,2,:)))
-    nexttile;
-    title("Catch Trials")
-    plot(1:size(anglediff,3),squeeze(anglediff(s,2,:)))
-    hold on
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_catch(s,1,:)))
-    plot(1:size(Alpha_ERP_catch,3),squeeze(Alpha_ERP_catch(s,2,:)))
-end
 %% Plot
+
 for s=1:length(subj)
     figure; t=tiledlayout('flow');
     maintit=sprintf("Subject %i",subj(s));
     title(t,maintit)
     nexttile;
     title("Target Trials")
-    plot(1:size(anglediff,3),squeeze(anglediff(s,1,:)))
+    plot(timeVec,abs(squeeze(anglediff(s,1,:))),'LineWidth',2)
     hold on
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_target(s,1,:)))
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_target(s,2,:)))
-    xline(0,"WS")
-    xline(800,"Target")
-    nexttile;
-    title("Catch Trials")
-    plot(1:size(anglediff,3),squeeze(anglediff(s,2,:)))
-    hold on
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_catch(s,1,:)))
-    plot(1:size(Alpha_ERP_catch,3),squeeze(Alpha_ERP_catch(s,2,:)))
-    xline(0,"WS")
-    xline(800,"Target")
-end
-xline(0)
-for s=1:length(subj)
-    figure; t=tiledlayout('flow');
-    maintit=sprintf("Subject %i",subj(s));
-    title(t,maintit)
-    nexttile;
-    title("Target Trials")
-    plot(1:size(anglediff,3),squeeze(anglediff(s,1,:)))
-    hold on
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_target(s,1,:)))
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_target(s,2,:)))
-    xline(0)
-    xline(800)
-    nexttile;
-    title("Catch Trials")
-    plot(1:size(anglediff,3),squeeze(anglediff(s,2,:)))
-    hold on
-    plot(1:size(Alpha_ERP_target,3),squeeze(Alpha_ERP_catch(s,1,:)))
-    plot(1:size(Alpha_ERP_catch,3),squeeze(Alpha_ERP_catch(s,2,:)))
-    xline(0)
-    xline(800)
-end
-for s=1:length(subj)
-    figure; t=tiledlayout('flow');
-    maintit=sprintf("Subject %i",subj(s));
-    title(t,maintit)
-    nexttile;
-    title("Target Trials")
-    plot(timeVec,squeeze(anglediff(s,1,:)))
-    hold on
-    plot(timeVec,squeeze(Alpha_ERP_target(s,1,:)))
-    plot(timeVec,squeeze(Alpha_ERP_target(s,2,:)))
-    xline(0)
-    xline(800)
-    nexttile;
-    title("Catch Trials")
-    plot(timeVec,squeeze(anglediff(s,2,:)))
-    hold on
-    plot(timeVec,squeeze(Alpha_ERP_catch(s,1,:)))
-    plot(timeVec,squeeze(Alpha_ERP_catch(s,2,:)))
-    xline(0)
-    xline(800)
-end
-for s=1:length(subj)
-    figure; t=tiledlayout('flow');
-    maintit=sprintf("Subject %i",subj(s));
-    title(t,maintit)
-    nexttile;
-    title("Target Trials")
-    plot(timeVec,squeeze(anglediff(s,1,:)),'LineWidth',2)
-    hold on
-    plot(timeVec,squeeze(Alpha_ERP_target(s,1,:)),'LineWidth',2)
-    plot(timeVec,squeeze(Alpha_ERP_target(s,2,:)),'LineWidth',2)
-    xline(0)
-    xline(800)
-    nexttile;
-    title("Catch Trials")
-    plot(timeVec,squeeze(anglediff(s,2,:)),'LineWidth',2)
-    hold on
-    plot(timeVec,squeeze(Alpha_ERP_catch(s,1,:)),'LineWidth',2)
-    plot(timeVec,squeeze(Alpha_ERP_catch(s,2,:)),'LineWidth',2)
-    xline(0)
-    xline(800)
-end
-title("Target Trials")
-plot(timeVec,squeeze(anglediff(s,1,:)),'LineWidth',2)
-hold on
-plot(timeVec,squeeze(Alpha_ERP_target(s,1,:)),'LineWidth',2)
-legend(["Angle Difference","ERP 800","ERP 850"])
-legend({"Angle Difference","ERP 800","ERP 850"})
-legend("Angle Difference","ERP 800","ERP 850")
-nexttile;
-title("Target Trials")
-plot(timeVec,squeeze(anglediff(s,1,:)),'LineWidth',2)
-hold on
-plot(timeVec,squeeze(Alpha_ERP_target(s,1,:)),'LineWidth',2)
-plot(timeVec,squeeze(Alpha_ERP_target(s,2,:)),'LineWidth',2)
-xline(0)
-xline(800)
-legend("Angle Difference","ERP 800","ERP 850")
-plot(timeVec,squeeze(Alpha_ERP_target(s,1,:)),'LineWidth',2)
-nexttile;
-title("Target Trials")
-plot(timeVec,squeeze(anglediff(s,1,:)),'LineWidth',2)
-hold on
-plot(timeVec,squeeze(Alpha_ERP_target(s,1,:)),'LineWidth',2)
-plot(timeVec,squeeze(Alpha_ERP_target(s,2,:)),'LineWidth',2)
-xline(0)
-xline(800)
-legend("Angle Difference","ERP 800","ERP 850")
-for s=1:length(subj)
-    figure; t=tiledlayout('flow');
-    maintit=sprintf("Subject %i",subj(s));
-    title(t,maintit)
-    nexttile;
-    title("Target Trials")
-    plot(timeVec,squeeze(anglediff(s,1,:)),'LineWidth',2)
-    hold on
-    plot(timeVec,squeeze(Alpha_ERP_target(s,1,:)),'LineWidth',2)
-    plot(timeVec,squeeze(Alpha_ERP_target(s,2,:)),'LineWidth',2)
+    plot(timeVec,abs(squeeze(Alpha_ERP_target(s,1,:))),'LineWidth',2)
+    plot(timeVec,abs(squeeze(Alpha_ERP_target(s,2,:))),'LineWidth',2)
     xline(0)
     xline(800)
     legend("Angle Difference","ERP 800","ERP 850")
     nexttile;
     title("Catch Trials")
-    plot(timeVec,squeeze(anglediff(s,2,:)),'LineWidth',2)
+    plot(timeVec,abs(squeeze(anglediff(s,2,:))),'LineWidth',2)
     hold on
-    plot(timeVec,squeeze(Alpha_ERP_catch(s,1,:)),'LineWidth',2)
-    plot(timeVec,squeeze(Alpha_ERP_catch(s,2,:)),'LineWidth',2)
+    plot(timeVec,abs(squeeze(Alpha_ERP_catch(s,1,:))),'LineWidth',2)
+    plot(timeVec,abs(squeeze(Alpha_ERP_catch(s,2,:))),'LineWidth',2)
     xline(0)
     xline(800)
     legend("Angle Difference","ERP 800","ERP 850")
@@ -242,21 +115,53 @@ for s=1:length(subj)
     title(t,maintit)
     nexttile;
     title("Target Trials")
-    plot(timeVec,squeeze(anglediff(s,1,:)),'LineWidth',2)
+    plot(timeVec,abs(squeeze(anglediff(s,1,:))),'LineWidth',2)
     hold on
-    plot(timeVec,squeeze(Alpha_ERP_target(s,1,:)),'LineWidth',2)
-    plot(timeVec,squeeze(Alpha_ERP_target(s,2,:)),'LineWidth',2)
+    plot(timeVec,abs(squeeze(Alpha_ERP_target(s,1,:))),'LineWidth',2)
+    plot(timeVec,abs(squeeze(Alpha_ERP_target(s,2,:))),'LineWidth',2)
     xline(0)
     xline(800)
     xline(850)
     legend("Angle Difference","ERP 800","ERP 850")
     nexttile;
     title("Catch Trials")
-    plot(timeVec,squeeze(anglediff(s,2,:)),'LineWidth',2)
+    plot(timeVec,abs(squeeze(anglediff(s,2,:))),'LineWidth',2)
     hold on
-    plot(timeVec,squeeze(Alpha_ERP_catch(s,1,:)),'LineWidth',2)
-    plot(timeVec,squeeze(Alpha_ERP_catch(s,2,:)),'LineWidth',2)
+    plot(timeVec,abs(squeeze(Alpha_ERP_catch(s,1,:))),'LineWidth',2)
+    plot(timeVec,abs(squeeze(Alpha_ERP_catch(s,2,:))),'LineWidth',2)
     xline(0)
     xline(800)
     legend("Angle Difference","ERP 800","ERP 850")
 end
+
+%% Group Level Plot
+% Just to see, do not think this is justified scientifically as an analysis
+% Average across participants
+GL_anglediff=squeeze(mean(abs(anglediff),1));
+GL_Alpha_ERP_target=squeeze(mean(Alpha_ERP_target,1));
+GL_Alpha_ERP_catch=squeeze(mean(Alpha_ERP_catch,1));
+
+% Plot
+figure; t=tiledlayout('flow');
+maintit=sprintf("Subject %i",subj(s));
+title(t,"Group Level (not interpretable!)")
+nexttile;
+plot(timeVec,abs(squeeze(GL_anglediff(1,:))),'LineWidth',2)
+hold on
+plot(timeVec,squeeze(GL_Alpha_ERP_target(1,:)),'LineWidth',2)
+plot(timeVec,squeeze(GL_Alpha_ERP_target(2,:)),'LineWidth',2)
+xline(0)
+xline(800)
+xline(850)
+ylabel("Target")
+legend("Angle Difference","ERP 800","ERP 850")
+nexttile;
+plot(timeVec,abs(squeeze(GL_anglediff(2,:))),'LineWidth',2)
+hold on
+plot(timeVec,squeeze(GL_Alpha_ERP_catch(1,:)),'LineWidth',2)
+plot(timeVec,squeeze(GL_Alpha_ERP_catch(2,:)),'LineWidth',2)
+xline(0)
+xline(800)
+xline(850)
+ylabel("Catch")
+legend("Angle Difference","ERP 800","ERP 850")

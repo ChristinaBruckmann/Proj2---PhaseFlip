@@ -1,4 +1,4 @@
-%% Exlperieement Code Project 2 - Phase Flip
+%% Experiment Code Project 2 - Phase Flip
 
 % Requires the custom functions PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m, as well as palamedes toolbox
 
