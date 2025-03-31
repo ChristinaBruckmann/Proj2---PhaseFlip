@@ -1,0 +1,1 @@
+ListenChar(0); % Restore default input handling
