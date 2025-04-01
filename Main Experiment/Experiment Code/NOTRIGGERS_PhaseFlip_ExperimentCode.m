@@ -1,6 +1,13 @@
 %% Experiment Code Project 2 - Phase Flip
-
 % Requires the custom functions PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m, as well as palamedes toolbox
+
+%% To-Do:
+% Two interwoven staircases (one starting from top, one from bottom) for both JND and Main Experiment
+% Change JND stopping criterion to deviation from mean of last trials, not fixed reversals 
+% Increase occurrence of reminder intervals?
+% Possible to increase trial numbers?
+% Fix display issue of JND graph 
+% Fix trigers for reminder interval
 
 % Clear
 sca;
@@ -47,7 +54,7 @@ while ~ input_complete
             JND_task=1; % JND Task?
             practice=1; % Practice?
 
-            % Input Subject Numbert
+            % Input Subject Number
             sub_num_compl=0;
             subresults.subj_num=[];
             while ~sub_num_compl
@@ -68,7 +75,7 @@ while ~ input_complete
                 end
 
                 % Check if a file for this participant already exists
-                savefilename=sprintf("Pilot_PhaseFlip_Subj%i",subresults.subj_num);
+                savefilename=sprintf("PhaseFlip_Subj%i",subresults.subj_num);
                 try
                     cd 'C:\Experiments\Christina\PhaseFlip\Pilot\FP_Data'
                     load(savefilename) % Try to load a file with this name, if it exists ask if this should be used
@@ -258,10 +265,10 @@ scr.ifi = Screen('GetFlipInterval', scr.win);
 
 %% Timing Parameters
 
-time.III_JND=[0.5:0.1:1]; % Inter-Interval-Interval for JND
-time.ITI=[1.85:0.1:2.15]; % Inter-Trial Interval
-time.ITIreminder=[0.85:0.1:1.15]; % ITI for the reminder function (shorter to not lose time)
-time.initmask=[0.75:0.1:1.25];% Initial Mask pre-WS
+time.III_JND=[0.5:0.01:1]; % Inter-Interval-Interval for JND
+time.ITI=[1.85:0.01:2.15]; % Inter-Trial Interval
+time.ITIreminder=[0.85:0.01:1.15]; % ITI for the reminder function (shorter to not lose time)
+time.initmask=[0.75:0.01:1.25];% Initial Mask pre-WS
 time.preq=[0.4:0.05:0.6]; % Mask Duration post target and pre-question
 time.cuedur=0.1; % Cue Duration
 time.tardur=0.016; % Target Duration
@@ -604,7 +611,7 @@ if ~(scr.scope || scr.trigtest)
                 practice_JND=1;
                 while practice_JND
 
-                    [ ~,resp_eval,~]=JNDfunction(scr,time,stim,1);
+                    [ ~,resp_eval,~,~]=JNDfunction(scr,time,stim,1,speedrun);
                     % Print evaluation
                     if resp_eval==1
                         DrawFormattedText(scr.win,'Correct', 'center', 'center', scr.fontcolour);
@@ -615,7 +622,8 @@ if ~(scr.scope || scr.trigtest)
                         Screen('Flip', scr.win);
                         pause(1)
                     end
-                    % Another one? Or show instructions again? Or adjust gabor visibility?
+
+                    % Another one? Or show instructions again?
                     while true
                         response=respfunction(scr.win,'Repeat? (1) \n\n Show Instructions (2)? \n\n Continue? (3)',["1","2","3"]);
                         switch double(response)
@@ -646,31 +654,37 @@ if ~(scr.scope || scr.trigtest)
                 Screen('Flip', scr.win);
                 pause(3)
 
-                [JND_results,~,JND_UD]=JNDfunction(scr,time,stim,0);
+                [JND_results,~,JND_UD_top,JND_UD_bottom]=JNDfunction(scr,time,stim,0,speedrun);
 
 %                 io64(scr.triggerPort, scr.triggerPortAddress, 255); % Stop recording
 %                 WaitSecs(0.1)
 %                 io64(scr.triggerPort, scr.triggerPortAddress, 0);
 
                 % Save results
-                cd 'C:\Experiments\Christina\PhaseFlip\Pilot\FP_Data'
+                %cd 'C:\Experiments\Christina\PhaseFlip\Pilot\FP_Data'
                 subresults.JND_results=JND_results;
-                subresults.JND_UD=JND_UD;
+                subresults.JND_UD_top=JND_UD_top;
+                subresults.JND_UD_bottom=JND_UD_bottom;
                 subresults.status.JND_done=1;
                 save(savefilename, 'subresults')
 
                 % Calculate JND
-                JND=mean(JND_UD.x(end-5:end));
+                JND_top=mean(JND_UD_top.x(end-5:end));
+                JND_bottom=mean(JND_UD_bottom.x(end-5:end));
+                JND=mean([JND_top JND_bottom]);
 
                 % Display end of JND message (wait for experimenter)
                 navipage(scr.win,text.JND_instructions4)
-%                 % Plot results and flip to screen
-%                 t = 1:length(JND_UD.x); 
-%                 JND_fig = figure('Visible', 'off'); % make invisible figure
-%                 plot(t,JND_UD.x,'k'); hold on; plot(t(JND_UD.response == 1),JND_UD.x(JND_UD.response == 1),'ko', 'MarkerFaceColor','k'); plot(t(JND_UD.response == 0),JND_UD.x(JND_UD.response == 0),'ko', 'MarkerFaceColor','w'); set(gca,'FontSize',16); axis([0 max(t)+1 min(JND_UD.x)-(max(JND_UD.x)-min(JND_UD.x))/10 max(JND_UD.x)+(max(JND_UD.x)-min(JND_UD.x))/10]);
-%                 JND_label=sprintf("JND=%.2f",JND); yline(JND); title(JND_label); xlabel('Trial'); ylabel('Stimulus Intensity'); 
-%                 PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
-%                 Screen('Flip', scr.win);
+                % Plot results and flip to screen
+                t = 1:length(JND_UD_bottom.x);
+                JND_fig = figure('Visible', 'off'); % make invisible figure
+                plot(t,JND_UD_bottom.x,'k'); hold on; plot(t(JND_UD_bottom.response == 1),JND_UD_bottom.x(JND_UD_bottom.response == 1),'ko', 'MarkerFaceColor','k'); plot(t(JND_UD_bottom.response == 0),JND_UD_bottom.x(JND_UD_bottom.response == 0),'ko', 'MarkerFaceColor','w'); set(gca,'FontSize',16); axis([0 max(t)+1 min(JND_UD_bottom.x)-(max(JND_UD_bottom.x)-min(JND_UD_bottom.x))/10 max(JND_UD_bottom.x)+(max(JND_UD_bottom.x)-min(JND_UD_bottom.x))/10]);
+                hold on
+                t = 1:length(JND_UD_top.x);
+                plot(t,JND_UD_top.x,'k'); hold on; plot(t(JND_UD_top.response == 1),JND_UD_top.x(JND_UD_top.response == 1),'ko', 'MarkerFaceColor','k'); plot(t(JND_UD_top.response == 0),JND_UD_top.x(JND_UD_top.response == 0),'ko', 'MarkerFaceColor','w'); set(gca,'FontSize',16); axis([0 max(t)+1 min(JND_UD_top.x)-(max(JND_UD_top.x)-min(JND_UD_top.x))/10 max(JND_UD_top.x)+(max(JND_UD_top.x)-min(JND_UD_top.x))/10]);
+                JND_label=sprintf("JND=%.2f",JND); yline(JND); title(JND_label); xlabel('Trial'); ylabel('Stimulus Intensity');
+                PTB_plotfig(JND_fig, scr.win, "JND_Figure", 0) % plot figure to PTB screen with this custom function
+                Screen('Flip', scr.win);
                 unlock_continue(scr.win, scr.unlock_code) % Blocks screen until experimenter unlocks (to prevent subject from changing the slide)
 
                 % Confirm or repeat
@@ -1422,15 +1436,16 @@ end
 % Make sure to jitter the scr.background noise so that the longer interval is not obvious by noise alone.
 % Maybe remove backfground noise?
 
-function [JND_results,resp_eval,JND_UD]=JNDfunction(scr,time,stim,JNDprac)
+function [JND_results,resp_eval,JND_UD_top,JND_UD_bottom]=JNDfunction(scr,time,stim,JNDprac,speedrun)
 
 % Parameters
-comparison_length=2; % start value for comparison interval length in s
+comparison_length_top=2; % start value for comparison from top in s
+comparison_length_bottom=0.7; % start value for comparison from top in s
 standard_length=0.7; % length of standrad interval (ideally the same as the interval shown in the main task)
 init_adjustment_steps=0.3; % bigger steps in the beginning (first descent)
-adjustment_steps=0.02; % size of adjustment each step in seconds
+adjustment_steps=0.03; % size of adjustment each step in seconds
 if ~stim.reducetrials % normal version
-maxreversals=18;
+    maxreversals=18;
 else % reduced trial N when testing the code
     maxreversals=5;
 end
@@ -1438,23 +1453,28 @@ end
 % Initialize
 JND_results=table(); %preallocate results
 currtrial=0;
+stop_JND=0;
 
 % Initialize Palamedes Staircase Procedure
 up = 1;                     % inceasypracticerease after 1 wrong
 down = 1;                   % decrease after 3 consecutive right
 stopcriterion = 'reversals';
 stoprule = maxreversals; % needs to be defined, but I don't want it to stop by itself so I set it to higher than the trial number
-startvalue = comparison_length;           %intensity on first trial
+startvalue_top = comparison_length_top; %intensity on first trial
+startvalue_bottom = comparison_length_bottom; %intensity on first trial
 xMin=standard_length; % minimum length
 
 if ~JNDprac % if not practice, run until max reversals are done
-    UD = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',init_adjustment_steps,'StepSizeUp', ...
+    UD_top = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',init_adjustment_steps,'StepSizeUp', ...
         init_adjustment_steps,'stopcriterion',stopcriterion,'stoprule',stoprule, ...
-        'startvalue',startvalue, 'xMin',xMin);
-else % if practice, run only one trial
+        'startvalue',startvalue_top, 'xMin',xMin);
+    UD_bottom = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',adjustment_steps,'StepSizeUp', ...
+        adjustment_steps,'stopcriterion',stopcriterion,'stoprule',stoprule, ...
+        'startvalue',startvalue_bottom, 'xMin',xMin);
+else % if practice, run only one trial with only one UD
     UD = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',init_adjustment_steps,'StepSizeUp', ...
         init_adjustment_steps,'stopcriterion','trials','stoprule',1, ...
-        'startvalue',startvalue, 'xMin',xMin);
+        'startvalue',startvalue_top, 'xMin',xMin);
 end
 
 % Shuffle textures
@@ -1466,15 +1486,45 @@ noisetex=stim.noisetex(randperm(length(stim.noisetex)));
 % pause(0.1)
 % io64(scr.triggerPort, scr.triggerPortAddress,0);
 
-while ~UD.stop
+while ~stop_JND
 
     currtrial=currtrial+1; %Update trial counter
     cnoise=1;
     ccue1=1;
     ccue2=1;
 
+    % Shuffle which UD gets used
+    if ~JNDprac
+        if UD_top.stop && ~UD_bottom.stop % if bottom one is still running but top one is not, only continue with bottom
+            curr_UD=UD_bottom;
+            which_UD=2;
+        elseif UD_bottom.stop && ~UD_top.stop % other way around
+            curr_UD=UD_top;
+            which_UD=1;
+        elseif ~UD_top.stop && ~UD_bottom.stop % if neither is stopped yet, choose randomly
+            which_UD=randi(1:2,1);
+            if which_UD==1
+                curr_UD=UD_top;
+            else
+                curr_UD=UD_bottom;
+            end
+        else
+            if UD_top.stop && UD_bottom.stop % Stop JND when both staircases are done
+                stop_JND=1;
+                break
+            end
+        end
+    else
+        curr_UD=UD;
+        which_UD=NaN;
+        if UD.stop==1
+            stop_JND=1;
+            break
+        end
+    end
+
     % Shuffle which interval gets presented first
-    interval_lengths=[round(standard_length/scr.ifi), round(UD.xCurrent/scr.ifi)]; % combine and convert into frames
+    interval_lengths=[round(standard_length/scr.ifi), round(curr_UD.xCurrent/scr.ifi)]; % combine and convert into frames
     interval_lengths=interval_lengths(randperm(length(interval_lengths)));
 
     % Shuffle III and post-interval mask lengths
@@ -1539,48 +1589,80 @@ while ~UD.stop
         % Blank screen to mark end of interval
         for fixidx=1:time.III_JND(intervals+1)
             Screen('Flip', scr.win);
-            Screen('DrawLines', scr.win, stim.fixCoords,...
-            stim.lineWidthPix, scr.black, [scr.xCenter sc.yCenter], 2);
+            %Screen('DrawLines', scr.win, stim.fixCoords,stim.lineWidthPix, scr.black, [scr.xCenter scr.yCenter], 2);
         end
     end
 
-    % Query Response
-    %     io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{1,'JND Question'});
+    if ~speedrun
+        % Query Response
+        %     io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{1,'JND Question'});
 
-    [response]=respfunction(scr.win,'Which interval was longer? \n\n 1 or 2?',["1","2"]);
+        [response]=respfunction(scr.win,'Which interval was longer? \n\n 1 or 2?',["1","2"]);
+
+        %     io64(scr.triggerPort, scr.triggerPortAddress,0);
+
+        % Evaluate Response
+        if  interval_lengths(1)==round(curr_UD.xCurrent/scr.ifi) && curr_UD.xCurrent>standard_length  && double(response)==1 % if (comparison was presented first & is longer) AND (the answer was 1) --> correct
+            resp_eval=1;
+            %         io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{1,'JND Response 1 Correct'});
+        elseif interval_lengths(2)==round(curr_UD.xCurrent/scr.ifi) && curr_UD.xCurrent>standard_length && double(response)==2 % if (comparison was presented second & is longer) AND (the answer was 2) --> correct
+            resp_eval=1;
+            %         io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{1,'JND Response 2 Correct'});
+        elseif interval_lengths(2)==round(curr_UD.xCurrent/scr.ifi) && curr_UD.xCurrent==standard_length % standard and comparison are equal
+            resp_eval=0; % always incorrect when comparison and standard are equal
+        else
+            resp_eval=0; % incorrect if none of the above hold
+        end
 
     %     io64(scr.triggerPort, scr.triggerPortAddress,0);
 
-    % Evaluate Response
-    if  interval_lengths(1)==round(UD.xCurrent/scr.ifi) && UD.xCurrent>standard_length  && double(response)==1 % if (comparison was presented first & is longer) AND (the answer was 1) --> correct
-        resp_eval=1;
-        %         io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{1,'JND Response 1 Correct'});
-    elseif interval_lengths(2)==round(UD.xCurrent/scr.ifi) && UD.xCurrent>standard_length && double(response)==2 % if (comparison was presented second & is longer) AND (the answer was 2) --> correct
-        resp_eval=1;
-        %         io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{1,'JND Response 2 Correct'});
-    elseif interval_lengths(2)==round(UD.xCurrent/scr.ifi) && UD.xCurrent==standard_length % standard and comparison are equal
-        resp_eval=0; % always incorrect when comparison and standard are equal
+    else % if speedrun
+        noise=-0.1 + (0.1 - (-0.1)) * rand; % noise of theoretical responder
+        theothreshold = 0.78+noise; % threshold of theoretical responder
+        if theothreshold<=curr_UD.xCurrent % if bigger interval is above theoretical threshold count as correct
+            resp_eval=1;
+            response=1;
+        else
+            resp_eval=0;
+            response=1;
+        end
+    end
+    
+    % Update staircase
+    curr_UD = PAL_AMUD_updateUD(curr_UD, resp_eval);
+
+    if ~JNDprac
+        if which_UD==1
+            UD_top = curr_UD;
+        else
+            UD_bottom = curr_UD;
+        end
     else
-        resp_eval=0; % incorrect if none of the above hold
+        UD=curr_UD;
     end
 
-    %     io64(scr.triggerPort, scr.triggerPortAddress,0);
-
-    % Update staircase
-    UD = PAL_AMUD_updateUD(UD, resp_eval);
-
     % Update step size after third reversal (to narrow the steps, assuming the participant has now reached a value around their threshold)
-    if ismember(3,UD.reversal)
-        UD = PAL_AMUD_setupUD(UD,'StepSizeDown',adjustment_steps,'StepSizeUp', ...
-            adjustment_steps);
+    if ~JNDprac
+        if ismember(3,UD_top.reversal)
+            UD_top = PAL_AMUD_setupUD(UD_top,'StepSizeDown',adjustment_steps,'StepSizeUp', ...
+                adjustment_steps);
+        elseif ismember(3,UD_bottom.reversal)
+            UD_bottom = PAL_AMUD_setupUD(UD_bottom,'StepSizeDown',adjustment_steps,'StepSizeUp', ...
+                adjustment_steps);
+        end
     end
 
     % Register data
-    JND_results(currtrial,:)={standard_length, UD.xCurrent, response, resp_eval};
-    JND_UD=UD;
-
+    JND_results(currtrial,:)={standard_length, curr_UD.xCurrent, response, resp_eval,which_UD};
+    if ~JNDprac
+        JND_UD_top=UD_top;
+        JND_UD_bottom=UD_bottom;
+    else
+        JND_UD_top=UD;
+        JND_UD_bottom=UD;
+    end
 end
-JND_results.Properties.VariableNames={'Standard','Comparison','Response','Correct'}; % add variable names to results table
+JND_results.Properties.VariableNames={'Standard','Comparison','Response','Correct','Top(1) or Bottom (2)'}; % add variable names to results table
 
 % % JND Stop Trigger
 % io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{1,'JND Stop'});

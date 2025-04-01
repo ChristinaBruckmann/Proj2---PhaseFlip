@@ -1489,11 +1489,11 @@ while ~UD.stop
             DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour); % Adds current interval number to screen
             Screen('Flip', scr.win);
             cnoise=cnoise+1;
-                        if fixidx==1
-                            io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{intervals,'JND Mask Onset'});
-                        elseif fixidx==2
-                            io64(scr.triggerPort, scr.triggerPortAddress,0);
-                        end
+            if fixidx==1
+                io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{intervals,'JND Mask Onset'});
+            elseif fixidx==2
+                io64(scr.triggerPort, scr.triggerPortAddress,0);
+            end
         end
 
         % Interval
@@ -1502,11 +1502,11 @@ while ~UD.stop
             DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
             ccue1=ccue1+1;
-                        if cueidx==1
-                            io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{intervals,'JND Cue 1'});
-                        elseif cueidx==2
-                            io64(scr.triggerPort, scr.triggerPortAddress,0);
-                        end
+            if cueidx==1
+                io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{intervals,'JND Cue 1'});
+            elseif cueidx==2
+                io64(scr.triggerPort, scr.triggerPortAddress,0);
+            end
         end
 
         for intidx=1:interval_lengths(intervals)
@@ -1521,11 +1521,11 @@ while ~UD.stop
             DrawFormattedText(scr.win,int2str(intervals),'center', scr.yCenter-(0.25*scr.axisy(2)),scr.fontcolour);
             Screen('Flip', scr.win);
             ccue2=ccue2+1;
-                        if cueidx==1
-                            io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{intervals,'JND Cue 2'});
-                        elseif cueidx==2
-                            io64(scr.triggerPort, scr.triggerPortAddress,0);
-                        end
+            if cueidx==1
+                io64(scr.triggerPort, scr.triggerPortAddress,stim.triggervectorJND{intervals,'JND Cue 2'});
+            elseif cueidx==2
+                io64(scr.triggerPort, scr.triggerPortAddress,0);
+            end
         end
 
         % Fixation
