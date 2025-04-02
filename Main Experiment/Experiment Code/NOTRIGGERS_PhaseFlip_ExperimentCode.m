@@ -2,7 +2,6 @@
 % Requires the custom functions PTB_plotfig.m and navipage.m, unlock_continue.m and respfunction.m, as well as palamedes toolbox
 
 %% To-Do:
-% Two interwoven staircases (one starting from top, one from bottom) for both JND and Main Experiment
 % Change JND stopping criterion to deviation from mean of last trials, not fixed reversals 
 % Increase occurrence of reminder intervals?
 % Possible to increase trial numbers?
@@ -669,8 +668,8 @@ if ~(scr.scope || scr.trigtest)
                 save(savefilename, 'subresults')
 
                 % Calculate JND
-                JND_top=mean(JND_UD_top.x(end-5:end));
-                JND_bottom=mean(JND_UD_bottom.x(end-5:end));
+                JND_top=mean(JND_UD_top.x(end-7:end));
+                JND_bottom=mean(JND_UD_bottom.x(end-7:end));
                 JND=mean([JND_top JND_bottom]);
 
                 % Display end of JND message (wait for experimenter)
@@ -1439,11 +1438,13 @@ end
 function [JND_results,resp_eval,JND_UD_top,JND_UD_bottom]=JNDfunction(scr,time,stim,JNDprac,speedrun)
 
 % Parameters
-comparison_length_top=2; % start value for comparison from top in s
-comparison_length_bottom=0.7; % start value for comparison from top in s
+comparison_length_prac=2; % comparison value for practice trial
+comparison_length_top=1.5; % start value for comparison from top in seconds
+comparison_length_bottom=0.7; % start value for comparison from top in seconds
 standard_length=0.7; % length of standrad interval (ideally the same as the interval shown in the main task)
-init_adjustment_steps=0.3; % bigger steps in the beginning (first descent)
-adjustment_steps=0.03; % size of adjustment each step in seconds
+init_adjustment_steps=0.2; % bigger steps in the beginning (first descent)
+adjustment_steps_up=0.03; % size of adjustment each step in seconds
+adjustment_steps_down=0.871*adjustment_steps_up; % according to García-Pérez (2001)
 if ~stim.reducetrials % normal version
     maxreversals=18;
 else % reduced trial N when testing the code
@@ -1457,7 +1458,7 @@ stop_JND=0;
 
 % Initialize Palamedes Staircase Procedure
 up = 1;                     % inceasypracticerease after 1 wrong
-down = 1;                   % decrease after 3 consecutive right
+down = 1;                   % decrease after 1 consecutive right
 stopcriterion = 'reversals';
 stoprule = maxreversals; % needs to be defined, but I don't want it to stop by itself so I set it to higher than the trial number
 startvalue_top = comparison_length_top; %intensity on first trial
@@ -1468,13 +1469,13 @@ if ~JNDprac % if not practice, run until max reversals are done
     UD_top = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',init_adjustment_steps,'StepSizeUp', ...
         init_adjustment_steps,'stopcriterion',stopcriterion,'stoprule',stoprule, ...
         'startvalue',startvalue_top, 'xMin',xMin);
-    UD_bottom = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',adjustment_steps,'StepSizeUp', ...
-        adjustment_steps,'stopcriterion',stopcriterion,'stoprule',stoprule, ...
+    UD_bottom = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',adjustment_steps_down,'StepSizeUp', ...
+        adjustment_steps_up,'stopcriterion',stopcriterion,'stoprule',stoprule, ...
         'startvalue',startvalue_bottom, 'xMin',xMin);
 else % if practice, run only one trial with only one UD
-    UD = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',init_adjustment_steps,'StepSizeUp', ...
-        init_adjustment_steps,'stopcriterion','trials','stoprule',1, ...
-        'startvalue',startvalue_top, 'xMin',xMin);
+    UD = PAL_AMUD_setupUD('up',up,'down',down,'StepSizeDown',adjustment_steps_down,'StepSizeUp', ...
+        adjustment_steps_up,'stopcriterion','trials','stoprule',1, ...
+        'startvalue',comparison_length_prac, 'xMin',xMin);
 end
 
 % Shuffle textures
@@ -1617,14 +1618,21 @@ while ~stop_JND
     %     io64(scr.triggerPort, scr.triggerPortAddress,0);
 
     else % if speedrun
-        noise=-0.1 + (0.1 - (-0.1)) * rand; % noise of theoretical responder
-        theothreshold = 0.78+noise; % threshold of theoretical responder
+        noise=-0.05 + (0.05 - (-0.05)) * rand; % noise of theoretical responder
+        theothreshold = 0.85+noise; % threshold of theoretical responder
         if theothreshold<=curr_UD.xCurrent % if bigger interval is above theoretical threshold count as correct
             resp_eval=1;
             response=1;
         else
-            resp_eval=0;
+            resp_eval=randi(2,1)-1; % if below threshold choose answer randomly (guess)
             response=1;
+        end
+    end
+
+    % Update step size if this is the first incorrect (no reversal so far)
+    if ~JNDprac
+        if ~ismember(1,curr_UD.reversal) && resp_eval==0
+            curr_UD = PAL_AMUD_setupUD(curr_UD,'StepSizeDown',adjustment_steps_down,'StepSizeUp', adjustment_steps_up);
         end
     end
     
@@ -1641,16 +1649,6 @@ while ~stop_JND
         UD=curr_UD;
     end
 
-    % Update step size after third reversal (to narrow the steps, assuming the participant has now reached a value around their threshold)
-    if ~JNDprac
-        if ismember(3,UD_top.reversal)
-            UD_top = PAL_AMUD_setupUD(UD_top,'StepSizeDown',adjustment_steps,'StepSizeUp', ...
-                adjustment_steps);
-        elseif ismember(3,UD_bottom.reversal)
-            UD_bottom = PAL_AMUD_setupUD(UD_bottom,'StepSizeDown',adjustment_steps,'StepSizeUp', ...
-                adjustment_steps);
-        end
-    end
 
     % Register data
     JND_results(currtrial,:)={standard_length, curr_UD.xCurrent, response, resp_eval,which_UD};
